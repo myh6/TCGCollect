@@ -6,6 +6,10 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		0F04966C307D0E9D00378952 /* AppCore in Frameworks */ = {isa = PBXBuildFile; productRef = 0F04966B307D0E9D00378952 /* AppCore */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXContainerItemProxy section */
 		0F04964E307CFDDE00378952 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -27,6 +31,7 @@
 		0F04963E307CFDDD00378952 /* TCGCollect.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = TCGCollect.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		0F04964D307CFDDE00378952 /* TCGCollectTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = TCGCollectTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		0F049657307CFDDE00378952 /* TCGCollectUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = TCGCollectUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		0F0496FF307D0E9D00378952 /* AppCore */ = {isa = PBXFileReference; lastKnownFileType = wrapper; name = AppCore; path = Packages/AppCore; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -52,6 +57,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				0F04966C307D0E9D00378952 /* AppCore in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -75,6 +81,7 @@
 		0F049635307CFDDD00378952 = {
 			isa = PBXGroup;
 			children = (
+				0F0496FF307D0E9D00378952 /* AppCore */,
 				0F049640307CFDDD00378952 /* TCGCollect */,
 				0F049650307CFDDE00378952 /* TCGCollectTests */,
 				0F04965A307CFDDE00378952 /* TCGCollectUITests */,
@@ -112,6 +119,7 @@
 			);
 			name = TCGCollect;
 			packageProductDependencies = (
+				0F04966B307D0E9D00378952 /* AppCore */,
 			);
 			productName = TCGCollect;
 			productReference = 0F04963E307CFDDD00378952 /* TCGCollect.app */;
@@ -615,6 +623,13 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		0F04966B307D0E9D00378952 /* AppCore */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = AppCore;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = 0F049636307CFDDD00378952 /* Project object */;
 }

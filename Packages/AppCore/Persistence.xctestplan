@@ -1,0 +1,24 @@
+{
+  "configurations" : [
+    {
+      "id" : "54197297-2B16-4F54-888A-CC5488AD97BC",
+      "name" : "Test Scheme Action",
+      "options" : {
+
+      }
+    }
+  ],
+  "defaultOptions" : {
+    "performanceAntipatternCheckerEnabled" : true
+  },
+  "testTargets" : [
+    {
+      "target" : {
+        "containerPath" : "container:",
+        "identifier" : "PersistenceTests",
+        "name" : "PersistenceTests"
+      }
+    }
+  ],
+  "version" : 1
+}
