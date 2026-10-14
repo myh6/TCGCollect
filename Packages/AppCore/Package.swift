@@ -23,13 +23,18 @@ let package = Package(
         // Targets can depend on other targets in this package and products from dependencies.
         .target(
             name: "AppCore",
-            dependencies: ["Networking", "Persistence"]
+            dependencies: ["Domain", "Networking", "Persistence"]
         ),
         .target(
-            name: "Networking"
+            name: "Domain"
         ),
         .target(
-            name: "Persistence"
+            name: "Networking",
+            dependencies: ["Domain"]
+        ),
+        .target(
+            name: "Persistence",
+            dependencies: ["Domain"]
         ),
         .testTarget(
             name: "NetworkingTests",
