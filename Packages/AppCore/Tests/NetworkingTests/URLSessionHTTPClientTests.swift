@@ -60,6 +60,17 @@ final class URLSessionHTTPClientTests {
         #expect(receivedError?.domain == error.domain)
         #expect(receivedError?.code == error.code)
     }
+        
+    @Test func getFromURL_succeedsOnHTTPURLResponseWithData() async throws {
+        let data = anyData()
+        let response = anyHTTPURLResponse()
+        URLProtocolStub.stub(data: data, response: response, error: nil)
+        
+        let received = try await makeSUT().get(from: anyURL())
+        #expect(received.0 == data)
+        #expect(received.1.url == response.url)
+        #expect(received.1.statusCode == response.statusCode)
+    }
 
     //MARK: - Helpers
     private func makeSUT(sourceLocation: SourceLocation = #_sourceLocation) -> URLSessionHTTPClient {
