@@ -32,6 +32,7 @@
 		0F04964D307CFDDE00378952 /* TCGCollectTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = TCGCollectTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		0F049657307CFDDE00378952 /* TCGCollectUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = TCGCollectUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		0F0496FF307D0E9D00378952 /* AppCore */ = {isa = PBXFileReference; lastKnownFileType = wrapper; name = AppCore; path = Packages/AppCore; sourceTree = "<group>"; };
+		0F5A73613080C60600B42482 /* Networking.xctestplan */ = {isa = PBXFileReference; lastKnownFileType = text; name = Networking.xctestplan; path = Packages/AppCore/Networking.xctestplan; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -81,6 +82,7 @@
 		0F049635307CFDDD00378952 = {
 			isa = PBXGroup;
 			children = (
+				0F5A73613080C60600B42482 /* Networking.xctestplan */,
 				0F0496FF307D0E9D00378952 /* AppCore */,
 				0F049640307CFDDD00378952 /* TCGCollect */,
 				0F049650307CFDDE00378952 /* TCGCollectTests */,

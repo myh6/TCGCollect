@@ -9,6 +9,15 @@
     }
   ],
   "defaultOptions" : {
+    "codeCoverage" : {
+      "targets" : [
+        {
+          "containerPath" : "container:",
+          "identifier" : "Persistence",
+          "name" : "Persistence"
+        }
+      ]
+    },
     "performanceAntipatternCheckerEnabled" : true
   },
   "testTargets" : [
