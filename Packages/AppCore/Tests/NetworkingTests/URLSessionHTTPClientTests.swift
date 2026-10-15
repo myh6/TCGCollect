@@ -47,6 +47,19 @@ final class URLSessionHTTPClientTests {
         #expect(requests.map(\.url) == [url])
         #expect(requests.map(\.httpMethod) == ["GET"])
     }
+    
+    @Test func getFromURL_deliversErrorOnClientError() async throws {
+        let error = anyNSError()
+        URLProtocolStub.stub(data: nil, response: nil, error: error)
+        let sut = makeSUT()
+        
+        let receivedError = await #expect(throws: NSError.self) {
+            try await sut.get(from: anyURL())
+        }
+        
+        #expect(receivedError?.domain == error.domain)
+        #expect(receivedError?.code == error.code)
+    }
 
     //MARK: - Helpers
     private func makeSUT(sourceLocation: SourceLocation = #_sourceLocation) -> URLSessionHTTPClient {
