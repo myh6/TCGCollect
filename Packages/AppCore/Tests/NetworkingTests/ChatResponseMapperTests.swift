@@ -13,14 +13,6 @@ struct ChatResponseMapperTests {
         }
     }
 
-    @Test func map_throwsInvalidDataErrorOnNonHTTPResponse() {
-        let nonHTTPResponse = URLResponse(url: anyURL(), mimeType: nil, expectedContentLength: 0, textEncodingName: nil)
-
-        #expect(throws: ChatResponseMapper.Error.invalidData) {
-            try ChatResponseMapper.map(Data("a message".utf8), from: nonHTTPResponse)
-        }
-    }
-
     @Test func map_throwsInvalidDataErrorOn200HTTPResponseWithInvalidData() {
         let invalidUTF8 = Data([0xFF])
 

@@ -12,9 +12,8 @@ enum ChatResponseMapper {
         case invalidData
     }
 
-    static func map(_ data: Data, from response: URLResponse) throws -> String {
-        guard let httpResponse = response as? HTTPURLResponse,
-              httpResponse.statusCode == 200,
+    static func map(_ data: Data, from response: HTTPURLResponse) throws -> String {
+        guard response.statusCode == 200,
               let message = String(data: data, encoding: .utf8) else {
             throw Error.invalidData
         }
