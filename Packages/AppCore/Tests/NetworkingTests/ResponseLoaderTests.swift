@@ -1,5 +1,6 @@
 import Testing
 @testable import Networking
+import TestHelpers
 
 import Foundation
 
@@ -57,26 +58,14 @@ final class ChatResponseLoaderTests {
 
     // MARK: - Helpers
     private func makeSUT(
-        url: URL = URL(string: "https://any-url.com")!,
-        result: Result<NetworkClient.URLResult, Error> = .failure(NSError(domain: "any error", code: 0))
+        url: URL = anyURL(),
+        result: Result<NetworkClient.URLResult, Error> = .failure(anyNSError())
     ) -> (sut: ChatResponseLoader, client: SpyClient) {
         let client = SpyClient(result: result)
         let sut = ChatResponseLoader(url: url, client: client)
         return (sut, client)
     }
 
-    private func anyURL() -> URL {
-        URL(string: "https://any-url.com")!
-    }
-
-    private func anyNSError() -> NSError {
-        NSError(domain: "any error", code: 0)
-    }
-
-    private func httpResponse(statusCode: Int) -> HTTPURLResponse {
-        HTTPURLResponse(url: anyURL(), statusCode: statusCode, httpVersion: nil, headerFields: nil)!
-    }
-    
     final class SpyClient: NetworkClient {
         private(set) var requestedURLs = [URL]()
         private let result: Result<URLResult, Error>

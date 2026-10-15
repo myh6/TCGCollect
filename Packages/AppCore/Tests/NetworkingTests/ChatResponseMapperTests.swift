@@ -1,5 +1,6 @@
 import Testing
 @testable import Networking
+import TestHelpers
 
 import Foundation
 
@@ -32,14 +33,5 @@ struct ChatResponseMapperTests {
         let message = try ChatResponseMapper.map(Data("a reply".utf8), from: httpResponse(statusCode: 200))
 
         #expect(message == "a reply")
-    }
-
-    // MARK: - Helpers
-    private func anyURL() -> URL {
-        URL(string: "https://any-url.com")!
-    }
-
-    private func httpResponse(statusCode: Int) -> HTTPURLResponse {
-        HTTPURLResponse(url: anyURL(), statusCode: statusCode, httpVersion: nil, headerFields: nil)!
     }
 }
