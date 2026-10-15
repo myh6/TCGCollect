@@ -30,7 +30,7 @@ struct ChatResponseLoader: ResponseLoader {
     }
 }
 
-struct ChatResponseLoaderTests {
+final class ChatResponseLoaderTests {
 
     @Test func init_doesNotRequestFromClient() {
         let (_, client) = makeSUT()

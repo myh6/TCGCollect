@@ -36,13 +36,17 @@ let package = Package(
             name: "Persistence",
             dependencies: ["Domain"]
         ),
+        .target(
+            name: "TestHelpers",
+            path: "Tests/TestHelpers"
+        ),
         .testTarget(
             name: "NetworkingTests",
-            dependencies: ["Networking"]
+            dependencies: ["Networking", "TestHelpers"]
         ),
         .testTarget(
             name: "PersistenceTests",
-            dependencies: ["Persistence"]
+            dependencies: ["Persistence", "TestHelpers"]
         )
     ]
 )
