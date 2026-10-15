@@ -48,7 +48,7 @@ final class URLSessionHTTPClientTests {
         #expect(requests.map(\.httpMethod) == ["GET"])
     }
     
-    @Test func getFromURL_deliversErrorOnClientError() async throws {
+    @Test func getFromURL_deliversErrorOnClientError() async {
         let error = anyNSError()
         URLProtocolStub.stub(data: nil, response: nil, error: error)
         let sut = makeSUT()
@@ -59,6 +59,18 @@ final class URLSessionHTTPClientTests {
         
         #expect(receivedError?.domain == error.domain)
         #expect(receivedError?.code == error.code)
+    }
+    
+    @Test func getFromURL_failsOnNonHTTPURLResponse() async {
+        let response = nonHTTPURLResponse()
+        URLProtocolStub.stub(data: nil, response: response, error: nil)
+        let sut = makeSUT()
+        
+        let receivedError = await #expect(throws: URLError.self) {
+            try await sut.get(from: anyURL())
+        }
+        
+        #expect(receivedError?.code == .badServerResponse)
     }
         
     @Test func getFromURL_succeedsOnHTTPURLResponseWithData() async throws {
