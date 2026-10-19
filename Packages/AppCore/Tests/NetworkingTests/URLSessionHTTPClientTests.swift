@@ -127,6 +127,18 @@ final class URLSessionHTTPClientTests {
         #expect(receivedError?.code == error.code)
     }
 
+    @Test func postToURL_failsOnNonHTTPURLResponse() async {
+        let response = nonHTTPURLResponse()
+        URLProtocolStub.stub(data: nil, response: response, error: nil)
+        let sut = makeSUT()
+
+        let receivedError = await #expect(throws: URLError.self) {
+            try await sut.post(anyData(), to: anyURL())
+        }
+
+        #expect(receivedError?.code == .badServerResponse)
+    }
+
     //MARK: - Helpers
     private func makeSUT(sourceLocation: SourceLocation = #_sourceLocation) -> URLSessionHTTPClient {
         let config = URLSessionConfiguration.ephemeral
