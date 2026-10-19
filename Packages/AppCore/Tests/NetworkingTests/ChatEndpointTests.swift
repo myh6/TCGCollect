@@ -17,7 +17,7 @@ struct ChatEndpointTests {
 
         let received = try ChatEndpoint.sendMessage("any message").urlRequest(baseURL: baseURL)
 
-        #expect(received.url?.absoluteString == "http://base-url.com/v1/chat")
+        #expect(received.url?.absoluteString == "http://base-url.com/v1/ask")
     }
 
     @Test
@@ -26,7 +26,7 @@ struct ChatEndpointTests {
 
         let received = try ChatEndpoint.sendMessage("any message").urlRequest(baseURL: baseURL)
 
-        #expect(received.url?.absoluteString == "http://base-url.com/staging/v1/chat")
+        #expect(received.url?.absoluteString == "http://base-url.com/staging/v1/ask")
     }
 
     @Test
