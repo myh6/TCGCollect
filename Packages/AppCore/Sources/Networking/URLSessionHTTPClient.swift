@@ -26,6 +26,7 @@ final class URLSessionHTTPClient: NetworkClient {
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.httpBody = data
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         let (data, response) = try await session.data(for: request)
         guard let response = response as? HTTPURLResponse else {
             throw URLError(.badServerResponse)

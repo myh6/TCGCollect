@@ -104,6 +104,16 @@ final class URLSessionHTTPClientTests {
         #expect(requests.map(\.bodyData) == [data])
     }
 
+    @Test func postToURL_sendsJSONContentType() async {
+        let sut = makeSUT()
+
+        let requests = await requestsObserved {
+            _ = try? await sut.post(anyData(), to: anyURL())
+        }
+
+        #expect(requests.map { $0.value(forHTTPHeaderField: "Content-Type") } == ["application/json"])
+    }
+
     //MARK: - Helpers
     private func makeSUT(sourceLocation: SourceLocation = #_sourceLocation) -> URLSessionHTTPClient {
         let config = URLSessionConfiguration.ephemeral
