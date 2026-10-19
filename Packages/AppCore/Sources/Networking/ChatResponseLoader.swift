@@ -12,7 +12,12 @@ struct ChatResponseLoader: ResponseLoader {
     let client: NetworkClient
 
     func load(from input: String) async throws -> String {
-        let (data, response) = try await client.get(from: url)
+        let body = try JSONEncoder().encode(ChatRequest(message: input))
+        let (data, response) = try await client.post(body, to: url)
         return try ChatResponseMapper.map(data, from: response)
+    }
+
+    private struct ChatRequest: Encodable {
+        let message: String
     }
 }

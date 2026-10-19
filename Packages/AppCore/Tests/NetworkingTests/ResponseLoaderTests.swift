@@ -12,7 +12,7 @@ final class ChatResponseLoaderTests {
         #expect(client.requestedURLs.isEmpty)
     }
 
-    @Test func load_requestsFromURL() async {
+    @Test func load_postsToURL() async {
         let url = URL(string: "https://a-given-url.com")!
         let (sut, client) = makeSUT(url: url)
 
@@ -21,14 +21,25 @@ final class ChatResponseLoaderTests {
         #expect(client.requestedURLs == [url])
     }
 
-    @Test func loadTwice_requestsFromURLTwice() async {
+    @Test func load_postsMessageAsJSONBody() async throws {
+        let (sut, client) = makeSUT()
+
+        _ = try? await sut.load(from: "a message")
+
+        let bodies = try client.sentBodies.map(json)
+        #expect(bodies == [["message": "a message"]])
+    }
+
+    @Test func loadTwice_postsEachMessageInOrder() async throws {
         let url = URL(string: "https://a-given-url.com")!
         let (sut, client) = makeSUT(url: url)
 
-        _ = try? await sut.load(from: "any message")
-        _ = try? await sut.load(from: "any message")
+        _ = try? await sut.load(from: "first message")
+        _ = try? await sut.load(from: "second message")
 
+        let bodies = try client.sentBodies.map(json)
         #expect(client.requestedURLs == [url, url])
+        #expect(bodies == [["message": "first message"], ["message": "second message"]])
     }
 
     @Test func load_deliversClientErrorOnClientError() async {
@@ -66,16 +77,28 @@ final class ChatResponseLoaderTests {
         return (sut, client)
     }
 
+    private func json(_ data: Data) throws -> [String: String]? {
+        try JSONSerialization.jsonObject(with: data) as? [String: String]
+    }
+
     final class SpyClient: NetworkClient {
-        private(set) var requestedURLs = [URL]()
+        private var messages = [(url: URL, body: Data)]()
         private let result: Result<URLResult, Error>
+
+        var requestedURLs: [URL] { messages.map(\.url) }
+        var sentBodies: [Data] { messages.map(\.body) }
 
         init(result: Result<URLResult, Error>) {
             self.result = result
         }
 
         func get(from url: URL) async throws -> URLResult {
-            requestedURLs.append(url)
+            Issue.record("ChatResponseLoader should post, not get")
+            return try result.get()
+        }
+
+        func post(_ data: Data, to url: URL) async throws -> URLResult {
+            messages.append((url, data))
             return try result.get()
         }
     }
