@@ -11,22 +11,6 @@ import TestHelpers
 import Foundation
 import os
 
-final class URLSessionHTTPClient {
-    private let session: URLSession
-    
-    init(session: URLSession) {
-        self.session = session
-    }
-    
-    func get(from url: URL) async throws -> NetworkClient.URLResult {
-        let (data, response) = try await session.data(from: url)
-        guard let response = response as? HTTPURLResponse else {
-            throw URLError(.badServerResponse)
-        }
-        return (data, response)
-    }
-}
-
 // Run test one at a time (Swift Testing runs tests in parallel by default! :o)
 @Suite(.serialized)
 final class URLSessionHTTPClientTests {
