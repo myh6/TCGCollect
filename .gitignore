@@ -1,0 +1,17 @@
+# macOS
+.DS_Store
+
+# Xcode per-user state (breakpoints, scheme order, UI layout)
+xcuserdata/
+*.xcuserstate
+
+# Build output
+DerivedData/
+build/
+.build/
+*.xcresult
+
+# Secrets: API keys and local config never go in git
+.env
+*.secrets.xcconfig
+Secrets.xcconfig
