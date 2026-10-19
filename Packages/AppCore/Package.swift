@@ -45,6 +45,10 @@ let package = Package(
             dependencies: ["Networking", "TestHelpers"]
         ),
         .testTarget(
+            name: "NetworkingEndToEndTests",
+            dependencies: ["Networking"]
+        ),
+        .testTarget(
             name: "PersistenceTests",
             dependencies: ["Persistence", "TestHelpers"]
         )
