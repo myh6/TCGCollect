@@ -139,6 +139,17 @@ final class URLSessionHTTPClientTests {
         #expect(receivedError?.code == .badServerResponse)
     }
 
+    @Test func postToURL_succeedsOnHTTPURLResponseWithData() async throws {
+        let data = anyData()
+        let response = anyHTTPURLResponse()
+        URLProtocolStub.stub(data: data, response: response, error: nil)
+
+        let received = try await makeSUT().post(Data("a request body".utf8), to: anyURL())
+        #expect(received.0 == data)
+        #expect(received.1.url == response.url)
+        #expect(received.1.statusCode == response.statusCode)
+    }
+
     //MARK: - Helpers
     private func makeSUT(sourceLocation: SourceLocation = #_sourceLocation) -> URLSessionHTTPClient {
         let config = URLSessionConfiguration.ephemeral
