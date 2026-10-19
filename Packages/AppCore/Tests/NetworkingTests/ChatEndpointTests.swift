@@ -44,10 +44,10 @@ struct ChatEndpointTests {
     }
 
     @Test
-    func sendMessage_sendsMessageAsJSONBody() throws {
+    func sendMessage_sendsMessageAsJSONQuestion() throws {
         let received = try ChatEndpoint.sendMessage("a message").urlRequest(baseURL: anyBaseURL())
 
-        #expect(try json(received.httpBody) == ["message": "a message"])
+        #expect(try json(received.httpBody) == ["question": "a message"])
     }
 
     // MARK: - Helpers

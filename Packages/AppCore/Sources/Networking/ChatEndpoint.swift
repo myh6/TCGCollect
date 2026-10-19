@@ -16,12 +16,12 @@ enum ChatEndpoint {
             var request = URLRequest(url: baseURL.appending(path: "v1/ask"))
             request.httpMethod = "POST"
             request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-            request.httpBody = try JSONEncoder().encode(SendMessageBody(message: message))
+            request.httpBody = try JSONEncoder().encode(AskRequestBody(question: message))
             return request
         }
     }
 
-    private struct SendMessageBody: Encodable {
-        let message: String
+    private struct AskRequestBody: Encodable {
+        let question: String
     }
 }
