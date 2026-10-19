@@ -56,12 +56,13 @@ final class ChatResponseLoaderTests {
         }
     }
 
-    @Test func load_deliversMessageOn200HTTPResponseWithValidData() async throws {
-        let (sut, _) = makeSUT(result: .success((Data("a reply".utf8), httpResponse(statusCode: 200))))
+    @Test func load_deliversAnswerOn200HTTPResponseWithValidJSON() async throws {
+        let json = Data(#"{"answer": "an answer", "cards": []}"#.utf8)
+        let (sut, _) = makeSUT(result: .success((json, httpResponse(statusCode: 200))))
 
-        let message = try await sut.load(from: "any message")
+        let answer = try await sut.load(from: "any message")
 
-        #expect(message == "a reply")
+        #expect(answer == "an answer")
     }
 
     // MARK: - Helpers
