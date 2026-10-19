@@ -19,6 +19,7 @@ final class ChatResponseLoaderTests {
         _ = try? await sut.load(from: "any message")
 
         #expect(client.requestedURLs == [url])
+        #expect(client.requests.map(\.httpMethod) == ["POST"])
     }
 
     @Test func load_postsMessageAsJSONBody() async throws {
@@ -82,23 +83,18 @@ final class ChatResponseLoaderTests {
     }
 
     final class SpyClient: NetworkClient {
-        private var messages = [(url: URL, body: Data)]()
+        private(set) var requests = [URLRequest]()
         private let result: Result<URLResult, Error>
 
-        var requestedURLs: [URL] { messages.map(\.url) }
-        var sentBodies: [Data] { messages.map(\.body) }
+        var requestedURLs: [URL] { requests.compactMap(\.url) }
+        var sentBodies: [Data] { requests.compactMap(\.httpBody) }
 
         init(result: Result<URLResult, Error>) {
             self.result = result
         }
 
-        func get(from url: URL) async throws -> URLResult {
-            Issue.record("ChatResponseLoader should post, not get")
-            return try result.get()
-        }
-
-        func post(_ data: Data, to url: URL) async throws -> URLResult {
-            messages.append((url, data))
+        func perform(_ request: URLRequest) async throws -> URLResult {
+            requests.append(request)
             return try result.get()
         }
     }

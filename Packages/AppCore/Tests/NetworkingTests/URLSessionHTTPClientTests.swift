@@ -20,134 +20,79 @@ final class URLSessionHTTPClientTests {
         URLProtocolStub.removeStub()
     }
 
-    @Test func getFromURL_performsGETRequestWithURL() async {
-        let url = anyURL()
+    @Test func perform_sendsGivenRequestUnchanged() async {
+        var request = URLRequest(url: anyURL())
+        request.httpMethod = "DELETE"
+        request.setValue("a header value", forHTTPHeaderField: "A-Header")
+        request.httpBody = anyData()
         let sut = makeSUT()
 
         let requests = await requestsObserved {
-            _ = try? await sut.get(from: url)
+            _ = try? await sut.perform(request)
         }
 
-        #expect(requests.map(\.url) == [url])
-        #expect(requests.map(\.httpMethod) == ["GET"])
+        #expect(requests.map(\.url) == [request.url])
+        #expect(requests.map(\.httpMethod) == ["DELETE"])
+        #expect(requests.map { $0.value(forHTTPHeaderField: "A-Header") } == ["a header value"])
+        #expect(requests.map(\.bodyData) == [request.httpBody])
     }
-    
-    @Test func getFromURL_deliversErrorOnClientError() async {
+
+    @Test func perform_deliversErrorOnClientError() async {
         let error = anyNSError()
         URLProtocolStub.stub(data: nil, response: nil, error: error)
         let sut = makeSUT()
-        
+
         let receivedError = await #expect(throws: NSError.self) {
-            try await sut.get(from: anyURL())
+            try await sut.perform(anyRequest())
         }
-        
+
         #expect(receivedError?.domain == error.domain)
         #expect(receivedError?.code == error.code)
     }
-    
-    @Test func getFromURL_failsOnNonHTTPURLResponse() async {
+
+    @Test func perform_failsOnNonHTTPURLResponse() async {
         let response = nonHTTPURLResponse()
         URLProtocolStub.stub(data: nil, response: response, error: nil)
         let sut = makeSUT()
-        
+
         let receivedError = await #expect(throws: URLError.self) {
-            try await sut.get(from: anyURL())
+            try await sut.perform(anyRequest())
         }
-        
+
         #expect(receivedError?.code == .badServerResponse)
     }
-        
-    @Test func getFromURL_succeedsOnHTTPURLResponseWithData() async throws {
+
+    @Test func perform_succeedsOnHTTPURLResponseWithData() async throws {
         let data = anyData()
         let response = anyHTTPURLResponse()
         URLProtocolStub.stub(data: data, response: response, error: nil)
-        
-        let received = try await makeSUT().get(from: anyURL())
+
+        let received = try await makeSUT().perform(anyRequest())
         #expect(received.0 == data)
         #expect(received.1.url == response.url)
         #expect(received.1.statusCode == response.statusCode)
     }
-    
-    @Test func getFromURL_succeedsOnHTTPURLResponseWithEmptyData() async throws {
+
+    @Test func perform_succeedsOnHTTPURLResponseWithEmptyData() async throws {
         let data = Data()
         let response = anyHTTPURLResponse()
         URLProtocolStub.stub(data: data, response: response, error: nil)
-        
-        let received = try await makeSUT().get(from: anyURL())
+
+        let received = try await makeSUT().perform(anyRequest())
         #expect(received.0 == data)
         #expect(received.1.url == response.url)
         #expect(received.1.statusCode == response.statusCode)
     }
 
     @Test(arguments: [100, 199, 201, 204, 301, 400, 401, 404, 430, 500, 503])
-    func getFromURL_deliversNon200HTTPURLResponseAsSuccess(statusCode: Int) async throws {
+    func perform_deliversNon200HTTPURLResponseAsSuccess(statusCode: Int) async throws {
         let data = anyData()
         let response = httpResponse(statusCode: statusCode)
         URLProtocolStub.stub(data: data, response: response, error: nil)
 
-        let received = try await makeSUT().get(from: anyURL())
+        let received = try await makeSUT().perform(anyRequest())
         #expect(received.0 == data)
         #expect(received.1.statusCode == statusCode)
-    }
-
-    @Test func postToURL_performsPOSTRequestWithData() async {
-        let url = anyURL()
-        let data = anyData()
-        let sut = makeSUT()
-
-        let requests = await requestsObserved {
-            _ = try? await sut.post(data, to: url)
-        }
-
-        #expect(requests.map(\.url) == [url])
-        #expect(requests.map(\.httpMethod) == ["POST"])
-        #expect(requests.map(\.bodyData) == [data])
-    }
-
-    @Test func postToURL_sendsJSONContentType() async {
-        let sut = makeSUT()
-
-        let requests = await requestsObserved {
-            _ = try? await sut.post(anyData(), to: anyURL())
-        }
-
-        #expect(requests.map { $0.value(forHTTPHeaderField: "Content-Type") } == ["application/json"])
-    }
-
-    @Test func postToURL_deliversErrorOnClientError() async {
-        let error = anyNSError()
-        URLProtocolStub.stub(data: nil, response: nil, error: error)
-        let sut = makeSUT()
-
-        let receivedError = await #expect(throws: NSError.self) {
-            try await sut.post(anyData(), to: anyURL())
-        }
-
-        #expect(receivedError?.domain == error.domain)
-        #expect(receivedError?.code == error.code)
-    }
-
-    @Test func postToURL_failsOnNonHTTPURLResponse() async {
-        let response = nonHTTPURLResponse()
-        URLProtocolStub.stub(data: nil, response: response, error: nil)
-        let sut = makeSUT()
-
-        let receivedError = await #expect(throws: URLError.self) {
-            try await sut.post(anyData(), to: anyURL())
-        }
-
-        #expect(receivedError?.code == .badServerResponse)
-    }
-
-    @Test func postToURL_succeedsOnHTTPURLResponseWithData() async throws {
-        let data = anyData()
-        let response = anyHTTPURLResponse()
-        URLProtocolStub.stub(data: data, response: response, error: nil)
-
-        let received = try await makeSUT().post(Data("a request body".utf8), to: anyURL())
-        #expect(received.0 == data)
-        #expect(received.1.url == response.url)
-        #expect(received.1.statusCode == response.statusCode)
     }
 
     //MARK: - Helpers
@@ -158,6 +103,10 @@ final class URLSessionHTTPClientTests {
         let sut = URLSessionHTTPClient(session: session)
         leakTracker.track(sut, sourceLocation: sourceLocation)
         return sut
+    }
+
+    private func anyRequest() -> URLRequest {
+        URLRequest(url: anyURL())
     }
 
     /// Swift Testing's stand-in for an `XCTestExpectation` that hands back what it observed:

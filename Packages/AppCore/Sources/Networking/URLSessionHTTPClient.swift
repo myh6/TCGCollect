@@ -14,19 +14,7 @@ final class URLSessionHTTPClient: NetworkClient {
         self.session = session
     }
     
-    func get(from url: URL) async throws -> NetworkClient.URLResult {
-        try await perform(URLRequest(url: url))
-    }
-
-    func post(_ data: Data, to url: URL) async throws -> NetworkClient.URLResult {
-        var request = URLRequest(url: url)
-        request.httpMethod = "POST"
-        request.httpBody = data
-        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        return try await perform(request)
-    }
-
-    private func perform(_ request: URLRequest) async throws -> NetworkClient.URLResult {
+    func perform(_ request: URLRequest) async throws -> NetworkClient.URLResult {
         let (data, response) = try await session.data(for: request)
         guard let response = response as? HTTPURLResponse else {
             throw URLError(.badServerResponse)
