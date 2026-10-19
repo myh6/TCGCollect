@@ -9,38 +9,34 @@ final class ChatResponseLoaderTests {
     @Test func init_doesNotRequestFromClient() {
         let (_, client) = makeSUT()
 
-        #expect(client.requestedURLs.isEmpty)
+        #expect(client.requests.isEmpty)
     }
 
-    @Test func load_postsToURL() async {
-        let url = URL(string: "https://a-given-url.com")!
-        let (sut, client) = makeSUT(url: url)
-
-        _ = try? await sut.load(from: "any message")
-
-        #expect(client.requestedURLs == [url])
-        #expect(client.requests.map(\.httpMethod) == ["POST"])
-    }
-
-    @Test func load_postsMessageAsJSONBody() async throws {
-        let (sut, client) = makeSUT()
+    @Test func load_sendsSendMessageRequestFromBaseURL() async throws {
+        let baseURL = URL(string: "https://a-base-url.com")!
+        let (sut, client) = makeSUT(baseURL: baseURL)
 
         _ = try? await sut.load(from: "a message")
 
-        let bodies = try client.sentBodies.map(json)
-        #expect(bodies == [["message": "a message"]])
+        let expected = try ChatEndpoint.sendMessage("a message").urlRequest(baseURL: baseURL)
+        #expect(client.requests == [expected])
+        // URLRequest's == ignores httpBody, so compare the bodies explicitly.
+        #expect(client.requests.map(\.httpBody) == [expected.httpBody])
     }
 
-    @Test func loadTwice_postsEachMessageInOrder() async throws {
-        let url = URL(string: "https://a-given-url.com")!
-        let (sut, client) = makeSUT(url: url)
+    @Test func loadTwice_sendsEachMessageInOrder() async throws {
+        let baseURL = URL(string: "https://a-base-url.com")!
+        let (sut, client) = makeSUT(baseURL: baseURL)
 
         _ = try? await sut.load(from: "first message")
         _ = try? await sut.load(from: "second message")
 
-        let bodies = try client.sentBodies.map(json)
-        #expect(client.requestedURLs == [url, url])
-        #expect(bodies == [["message": "first message"], ["message": "second message"]])
+        let expected = [
+            try ChatEndpoint.sendMessage("first message").urlRequest(baseURL: baseURL),
+            try ChatEndpoint.sendMessage("second message").urlRequest(baseURL: baseURL),
+        ]
+        #expect(client.requests == expected)
+        #expect(client.requests.map(\.httpBody) == expected.map(\.httpBody))
     }
 
     @Test func load_deliversClientErrorOnClientError() async {
@@ -70,24 +66,17 @@ final class ChatResponseLoaderTests {
 
     // MARK: - Helpers
     private func makeSUT(
-        url: URL = anyURL(),
+        baseURL: URL = anyURL(),
         result: Result<NetworkClient.URLResult, Error> = .failure(anyNSError())
     ) -> (sut: ChatResponseLoader, client: SpyClient) {
         let client = SpyClient(result: result)
-        let sut = ChatResponseLoader(url: url, client: client)
+        let sut = ChatResponseLoader(baseURL: baseURL, client: client)
         return (sut, client)
-    }
-
-    private func json(_ data: Data) throws -> [String: String]? {
-        try JSONSerialization.jsonObject(with: data) as? [String: String]
     }
 
     final class SpyClient: NetworkClient {
         private(set) var requests = [URLRequest]()
         private let result: Result<URLResult, Error>
-
-        var requestedURLs: [URL] { requests.compactMap(\.url) }
-        var sentBodies: [Data] { requests.compactMap(\.httpBody) }
 
         init(result: Result<URLResult, Error>) {
             self.result = result
