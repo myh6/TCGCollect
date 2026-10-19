@@ -19,4 +19,13 @@ struct ChatURLEndpointTests {
 
         #expect(received.absoluteString == "http://base-url.com/v1/chat")
     }
+
+    @Test
+    func sendMessage_preservesBaseURLPath() {
+        let baseURL = URL(string: "http://base-url.com/staging")!
+
+        let received = ChatURLEndpoint.sendMessage.url(baseURL: baseURL)
+
+        #expect(received.absoluteString == "http://base-url.com/staging/v1/chat")
+    }
 }
