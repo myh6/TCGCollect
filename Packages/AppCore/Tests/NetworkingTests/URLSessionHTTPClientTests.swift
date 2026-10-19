@@ -90,6 +90,20 @@ final class URLSessionHTTPClientTests {
         #expect(received.1.statusCode == statusCode)
     }
 
+    @Test func postToURL_performsPOSTRequestWithData() async {
+        let url = anyURL()
+        let data = anyData()
+        let sut = makeSUT()
+
+        let requests = await requestsObserved {
+            _ = try? await sut.post(data, to: url)
+        }
+
+        #expect(requests.map(\.url) == [url])
+        #expect(requests.map(\.httpMethod) == ["POST"])
+        #expect(requests.map(\.bodyData) == [data])
+    }
+
     //MARK: - Helpers
     private func makeSUT(sourceLocation: SourceLocation = #_sourceLocation) -> URLSessionHTTPClient {
         let config = URLSessionConfiguration.ephemeral
@@ -173,5 +187,26 @@ final class URLSessionHTTPClientTests {
         }
         
         override func stopLoading() {}
+    }
+}
+
+private extension URLRequest {
+    /// URLSession moves `httpBody` into `httpBodyStream` before a URLProtocol sees the
+    /// request, so read whichever one is set.
+    var bodyData: Data? {
+        if let httpBody { return httpBody }
+        guard let stream = httpBodyStream else { return nil }
+
+        stream.open()
+        defer { stream.close() }
+
+        var data = Data()
+        var buffer = [UInt8](repeating: 0, count: 1024)
+        while stream.hasBytesAvailable {
+            let count = stream.read(&buffer, maxLength: buffer.count)
+            guard count > 0 else { break }
+            data.append(buffer, count: count)
+        }
+        return data
     }
 }
