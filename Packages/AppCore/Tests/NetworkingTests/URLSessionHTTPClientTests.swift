@@ -95,6 +95,17 @@ final class URLSessionHTTPClientTests {
         #expect(received.1.statusCode == response.statusCode)
     }
 
+    @Test(arguments: [100, 199, 201, 204, 301, 400, 401, 404, 430, 500, 503])
+    func getFromURL_deliversNon200HTTPURLResponseAsSuccess(statusCode: Int) async throws {
+        let data = anyData()
+        let response = httpResponse(statusCode: statusCode)
+        URLProtocolStub.stub(data: data, response: response, error: nil)
+
+        let received = try await makeSUT().get(from: anyURL())
+        #expect(received.0 == data)
+        #expect(received.1.statusCode == statusCode)
+    }
+
     //MARK: - Helpers
     private func makeSUT(sourceLocation: SourceLocation = #_sourceLocation) -> URLSessionHTTPClient {
         let config = URLSessionConfiguration.ephemeral
@@ -157,7 +168,6 @@ final class URLSessionHTTPClientTests {
         
         override func startLoading() {
             guard let stub = URLProtocolStub.stub else {
-                client?.urlProtocol(self, didFailWithError: URLError(.unknown))
                 return
             }
 
