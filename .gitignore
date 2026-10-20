@@ -11,6 +11,9 @@ build/
 .build/
 *.xcresult
 
+# Claude Code local settings and state
+.claude/
+
 # Secrets: API keys and local config never go in git
 .env
 *.secrets.xcconfig
