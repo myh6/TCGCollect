@@ -19,21 +19,13 @@ struct ChatEndToEndTests {
 
     @Test func load_deliversAnswerFromBackend() async throws {
         let question = "What is a Leader card in One Piece TCG?"
-        let sut = ChatResponseLoader(baseURL: try #require(baseURL), client: makeClient(apiKey: try #require(apiKey)))
+        // Same composition the app uses, including its real URLSession.
+        let sut = ChatComposer.makeChatLoader(baseURL: try #require(baseURL), apiKey: try #require(apiKey))
 
         let answer = try await sut.load(from: question)
 
         // The dev-mode answer echoes the question, which proves it went through the whole round trip.
         #expect(answer.contains(question))
-    }
-
-    // MARK: - Helpers
-    private func makeClient(apiKey: String) -> NetworkClient {
-        let configuration = URLSessionConfiguration.ephemeral
-        // LLM + tool calls can outlast URLSession's 60s default.
-        configuration.timeoutIntervalForRequest = 120
-        let client = URLSessionHTTPClient(session: URLSession(configuration: configuration))
-        return APIKeyHTTPClient(decoratee: client, apiKey: apiKey)
     }
 }
 
