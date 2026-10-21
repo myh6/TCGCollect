@@ -7,7 +7,7 @@
 
 import Foundation
 import Testing
-@testable import Networking
+import Networking
 
 /// Talks to a real backend, so it only runs when both environment variables are set, e.g.
 /// `E2E_BASE_URL=http://192.168.1.113:8000 E2E_API_KEY=<DEV_API_KEY> swift test --filter NetworkingEndToEndTests`
