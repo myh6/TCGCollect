@@ -8,6 +8,6 @@
 import Foundation
 
 public protocol NetworkClient {
-    typealias URLResult = (Data, URLResponse)
-    func get(from url: URL) async throws -> URLResult
+    typealias URLResult = (Data, HTTPURLResponse)
+    func perform(_ request: URLRequest) async throws -> URLResult
 }
