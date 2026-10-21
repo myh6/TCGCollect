@@ -14,6 +14,7 @@ struct ChatView: View {
     let viewModel: ChatViewModel
     // Kept after sending, so the user can see what they asked and edit it.
     @State private var question = ""
+    @FocusState private var isQuestionFocused: Bool
 
     var body: some View {
         VStack(spacing: 0) {
@@ -23,6 +24,9 @@ struct ChatView: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
             }
             .defaultScrollAnchor(.top)
+            .scrollDismissesKeyboard(.interactively)
+            .contentShape(Rectangle())
+            .onTapGesture { isQuestionFocused = false }
             Divider()
             inputBar
                 .padding()
@@ -51,6 +55,7 @@ struct ChatView: View {
         HStack(alignment: .bottom) {
             TextField("Ask a question…", text: $question, axis: .vertical)
                 .lineLimit(1...5)
+                .focused($isQuestionFocused)
                 .onSubmit(send)
             if viewModel.state == .loading {
                 Button("Cancel", systemImage: "stop.circle.fill") {
@@ -66,6 +71,8 @@ struct ChatView: View {
     }
 
     private func send() {
+        // Hide the keyboard so the answer and the tab bar are visible.
+        isQuestionFocused = false
         Task { await viewModel.send(question) }
     }
 }
