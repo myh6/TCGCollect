@@ -33,6 +33,8 @@
 		0F049657307CFDDE00378952 /* TCGCollectUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = TCGCollectUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		0F0496FF307D0E9D00378952 /* AppCore */ = {isa = PBXFileReference; lastKnownFileType = wrapper; name = AppCore; path = Packages/AppCore; sourceTree = "<group>"; };
 		0F5A73613080C60600B42482 /* Networking.xctestplan */ = {isa = PBXFileReference; lastKnownFileType = text; name = Networking.xctestplan; path = Packages/AppCore/Networking.xctestplan; sourceTree = "<group>"; };
+		0F5A7400308A000000B42482 /* Secrets.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Secrets.xcconfig; sourceTree = "<group>"; };
+		0F5A7401308A000000B42482 /* Secrets.example.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Secrets.example.xcconfig; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -82,6 +84,8 @@
 		0F049635307CFDDD00378952 = {
 			isa = PBXGroup;
 			children = (
+				0F5A7400308A000000B42482 /* Secrets.xcconfig */,
+				0F5A7401308A000000B42482 /* Secrets.example.xcconfig */,
 				0F5A73613080C60600B42482 /* Networking.xctestplan */,
 				0F0496FF307D0E9D00378952 /* AppCore */,
 				0F049640307CFDDD00378952 /* TCGCollect */,
@@ -397,6 +401,7 @@
 		};
 		0F049662307CFDDE00378952 /* Debug */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = 0F5A7400308A000000B42482 /* Secrets.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
