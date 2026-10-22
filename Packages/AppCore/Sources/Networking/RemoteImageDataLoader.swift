@@ -17,7 +17,7 @@ public struct RemoteImageDataLoader: ImageDataLoader {
     }
 
     public func loadImageData(from url: URL) async throws -> Data {
-        let (data, _) = try await client.perform(URLRequest(url: url))
-        return data
+        let (data, response) = try await client.perform(URLRequest(url: url))
+        return try ImageDataMapper.map(data, from: response)
     }
 }

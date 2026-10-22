@@ -34,6 +34,32 @@ struct RemoteImageDataLoaderTests {
         #expect(client.requests.map(\.url) == [url1, url2])
     }
 
+    @Test func loadImageData_deliversClientErrorOnClientError() async {
+        let clientError = anyNSError()
+        let (sut, _) = makeSUT(result: .failure(clientError))
+
+        await #expect(throws: clientError) {
+            try await sut.loadImageData(from: anyURL())
+        }
+    }
+
+    @Test func loadImageData_deliversMapperErrorOnInvalidResponse() async {
+        let (sut, _) = makeSUT(result: .success((anyData(), httpResponse(statusCode: 500))))
+
+        await #expect(throws: ImageDataMapper.Error.invalidData) {
+            try await sut.loadImageData(from: anyURL())
+        }
+    }
+
+    @Test func loadImageData_deliversDataOn200HTTPResponseWithNonEmptyData() async throws {
+        let imageData = Data("image data".utf8)
+        let (sut, _) = makeSUT(result: .success((imageData, httpResponse(statusCode: 200))))
+
+        let data = try await sut.loadImageData(from: anyURL())
+
+        #expect(data == imageData)
+    }
+
     // MARK: - Helpers
     private func makeSUT(
         result: Result<NetworkClient.URLResult, Error> = .failure(anyNSError())
