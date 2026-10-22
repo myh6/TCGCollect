@@ -8,11 +8,15 @@
 import Foundation
 import Domain
 
-/// Loads image data that was cached in an `ImageDataStore`.
-public struct LocalImageDataLoader: ImageDataLoader {
+/// Loads and saves image data through an `ImageDataStore`.
+public struct LocalImageDataLoader: ImageDataLoader, ImageDataCache {
     public enum LoadError: Error, Equatable {
         case failed
         case notFound
+    }
+
+    public enum SaveError: Error, Equatable {
+        case failed
     }
 
     private let store: ImageDataStore
@@ -30,5 +34,13 @@ public struct LocalImageDataLoader: ImageDataLoader {
         }
         guard let data else { throw LoadError.notFound }
         return data
+    }
+
+    public func save(_ data: Data, for url: URL) async throws {
+        do {
+            try await store.insert(data, for: url)
+        } catch {
+            throw SaveError.failed
+        }
     }
 }

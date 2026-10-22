@@ -55,6 +55,32 @@ struct LocalImageDataLoaderTests {
         #expect(data == storedData)
     }
 
+    @Test func save_insertsDataForURL() async {
+        let url = URL(string: "https://an-image-url.com/card.png")!
+        let data = Data("image data".utf8)
+        let (sut, store) = makeSUT()
+
+        try? await sut.save(data, for: url)
+
+        #expect(store.messages == [.insert(data, url)])
+    }
+
+    @Test func save_failsOnStoreInsertionError() async {
+        let (sut, store) = makeSUT()
+        store.insertionResult = .failure(anyNSError())
+
+        await #expect(throws: LocalImageDataLoader.SaveError.failed) {
+            try await sut.save(anyData(), for: anyURL())
+        }
+    }
+
+    @Test func save_succeedsOnStoreInsertionSuccess() async throws {
+        let (sut, store) = makeSUT()
+        store.insertionResult = .success(())
+
+        try await sut.save(anyData(), for: anyURL())
+    }
+
     // MARK: - Helpers
     private func makeSUT() -> (sut: LocalImageDataLoader, store: ImageDataStoreSpy) {
         let store = ImageDataStoreSpy()
@@ -65,14 +91,21 @@ struct LocalImageDataLoaderTests {
     private final class ImageDataStoreSpy: ImageDataStore {
         enum Message: Equatable {
             case retrieve(URL)
+            case insert(Data, URL)
         }
 
         private(set) var messages = [Message]()
         var retrievalResult: Result<Data?, Error> = .success(nil)
+        var insertionResult: Result<Void, Error> = .success(())
 
         func retrieve(dataForURL url: URL) async throws -> Data? {
             messages.append(.retrieve(url))
             return try retrievalResult.get()
+        }
+
+        func insert(_ data: Data, for url: URL) async throws {
+            messages.append(.insert(data, url))
+            try insertionResult.get()
         }
     }
 }

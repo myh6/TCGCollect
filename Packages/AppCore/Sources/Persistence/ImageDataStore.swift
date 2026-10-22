@@ -11,4 +11,5 @@ import Foundation
 public protocol ImageDataStore {
     /// nil when nothing is stored for `url`.
     func retrieve(dataForURL url: URL) async throws -> Data?
+    func insert(_ data: Data, for url: URL) async throws
 }
