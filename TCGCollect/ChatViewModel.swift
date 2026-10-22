@@ -16,16 +16,16 @@ final class ChatViewModel {
     enum State: Equatable {
         case idle
         case loading
-        case loaded(answer: String)
+        case loaded(answer: ChatAnswer)
         case failed(ChatError)
     }
 
     private(set) var state = State.idle
 
-    private let loader: ResponseLoader
-    private var loadTask: Task<String, Error>?
+    private let loader: ChatLoader
+    private var loadTask: Task<ChatAnswer, Error>?
 
-    init(loader: ResponseLoader) {
+    init(loader: ChatLoader) {
         self.loader = loader
     }
 
@@ -36,7 +36,7 @@ final class ChatViewModel {
         let stateBeforeSending = state
         state = .loading
         // Its own task, so cancel() can stop it; URLSession cancels the network request with it.
-        let task = Task { [loader] in try await loader.load(from: question) }
+        let task = Task { [loader] in try await loader.load(question: question) }
         loadTask = task
         defer { loadTask = nil }
 

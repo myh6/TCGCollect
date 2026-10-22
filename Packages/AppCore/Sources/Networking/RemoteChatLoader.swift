@@ -1,13 +1,14 @@
 //
-//  ChatResponseLoader.swift
+//  RemoteChatLoader.swift
 //  AppCore
 //
-//  Created by Min-Yang Huang on 2026/10/15.
+//  Created by Min-Yang Huang on 2026/10/22.
 //
 
 import Foundation
+import Domain
 
-public struct ChatResponseLoader: ResponseLoader {
+public struct RemoteChatLoader: ChatLoader {
     private let baseURL: URL
     private let client: NetworkClient
 
@@ -16,8 +17,8 @@ public struct ChatResponseLoader: ResponseLoader {
         self.client = client
     }
 
-    public func load(from input: String) async throws -> String {
-        let request = try ChatEndpoint.sendMessage(input).urlRequest(baseURL: baseURL)
+    public func load(question: String) async throws -> ChatAnswer {
+        let request = try ChatEndpoint.sendMessage(question).urlRequest(baseURL: baseURL)
         let (data, response) = try await client.perform(request)
         return try ChatResponseMapper.map(data, from: response)
     }

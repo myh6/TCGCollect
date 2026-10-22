@@ -26,14 +26,14 @@ struct ChatViewModelTests {
     @Test func send_requestsAnswerForQuestion() async {
         let (sut, loader) = makeSUT()
 
-        await send(to: sut, loader: loader, completingWith: .success("an answer"))
+        await send(to: sut, loader: loader, completingWith: .success(makeAnswer("an answer")))
 
         #expect(loader.questions == ["a question"])
     }
 
     @Test func send_trimsWhitespaceAroundQuestion() async {
         let (sut, loader) = makeSUT()
-        await send("  a question \n", to: sut, loader: loader, completingWith: .success("an answer"))
+        await send("  a question \n", to: sut, loader: loader, completingWith: .success(makeAnswer("an answer")))
 
         #expect(loader.questions == ["a question"])
     }
@@ -47,7 +47,7 @@ struct ChatViewModelTests {
         #expect(loader.questions.isEmpty)
         #expect(sut.state == .idle)
 
-        loader.completeAllPending(with: .success("an answer"))
+        loader.completeAllPending(with: .success(makeAnswer("an answer")))
         await sending.value
     }
 
@@ -57,16 +57,17 @@ struct ChatViewModelTests {
         let sending = await startSending(to: sut, loader: loader)
         #expect(sut.state == .loading)
 
-        loader.complete(with: .success("an answer"))
+        loader.complete(with: .success(makeAnswer("an answer")))
         await sending.value
     }
 
-    @Test func send_deliversAnswerOnLoaderSuccess() async {
+    @Test func send_deliversAnswerWithSuggestionsOnLoaderSuccess() async {
         let (sut, loader) = makeSUT()
+        let answer = makeAnswer("an answer", suggestions: [makeSuggestion(cardID: 1), makeSuggestion(cardID: 2)])
 
-        await send(to: sut, loader: loader, completingWith: .success("an answer"))
+        await send(to: sut, loader: loader, completingWith: .success(answer))
 
-        #expect(sut.state == .loaded(answer: "an answer"))
+        #expect(sut.state == .loaded(answer: answer))
     }
 
     @Test func send_deliversCouldNotLoadAnswerErrorOnLoaderFailure() async {
@@ -84,7 +85,7 @@ struct ChatViewModelTests {
         let sending = await startSending(to: sut, loader: loader, at: 1)
         #expect(sut.state == .loading)
 
-        loader.complete(with: .success("an answer"), at: 1)
+        loader.complete(with: .success(makeAnswer("an answer")), at: 1)
         await sending.value
     }
 
@@ -97,7 +98,7 @@ struct ChatViewModelTests {
         await giveTimeToReachLoader(loader, requestCount: 2)
         #expect(loader.questions == ["a question"])
 
-        loader.completeAllPending(with: .success("an answer"))
+        loader.completeAllPending(with: .success(makeAnswer("an answer")))
         await firstSending.value
         await secondSending.value
     }
@@ -139,23 +140,23 @@ struct ChatViewModelTests {
         let sending = await startSending(to: sut, loader: loader)
 
         sut.cancel()
-        loader.complete(with: .success("a late answer"))
+        loader.complete(with: .success(makeAnswer("a late answer")))
         await sending.value
 
         #expect(sut.state == .idle)
     }
 
-    @Test(arguments: [Result<String, Error>.failure(URLError(.cancelled)), .success("a late answer")])
-    func cancel_restoresPreviousAnswer(lateResult: Result<String, Error>) async {
+    @Test(arguments: [Result<ChatAnswer, Error>.failure(URLError(.cancelled)), .success(makeAnswer("a late answer"))])
+    func cancel_restoresPreviousAnswer(lateResult: Result<ChatAnswer, Error>) async {
         let (sut, loader) = makeSUT()
-        await send(to: sut, loader: loader, completingWith: .success("an answer"))
+        await send(to: sut, loader: loader, completingWith: .success(makeAnswer("an answer")))
 
         let sending = await startSending(to: sut, loader: loader, at: 1)
         sut.cancel()
         loader.complete(with: lateResult, at: 1)
         await sending.value
 
-        #expect(sut.state == .loaded(answer: "an answer"))
+        #expect(sut.state == .loaded(answer: makeAnswer("an answer")))
     }
 
     // MARK: - Helpers
@@ -183,7 +184,7 @@ struct ChatViewModelTests {
         }
     }
 
-    private func send(_ question: String = "a question", to sut: ChatViewModel, loader: LoaderSpy, completingWith result: Result<String, Error>) async {
+    private func send(_ question: String = "a question", to sut: ChatViewModel, loader: LoaderSpy, completingWith result: Result<ChatAnswer, Error>) async {
         let sending = await startSending(question, to: sut, loader: loader)
         loader.complete(with: result)
         await sending.value
@@ -194,20 +195,20 @@ struct ChatViewModelTests {
     }
 
     /// Holds every `load` call until the test completes it, so tests can look at the in-between state.
-    private final class LoaderSpy: ResponseLoader {
+    private final class LoaderSpy: ChatLoader {
         private(set) var questions = [String]()
         // nil once completed, so no request is resumed twice.
-        private var completions = [CheckedContinuation<String, Error>?]()
+        private var completions = [CheckedContinuation<ChatAnswer, Error>?]()
         // Set by completeAllPending, so a request that arrives late doesn't wait forever.
-        private var resultForLaterRequests: Result<String, Error>?
+        private var resultForLaterRequests: Result<ChatAnswer, Error>?
         // Cancellation handlers can run on any thread, so they write through a lock.
         private let cancelled = OSAllocatedUnfairLock(initialState: [Int]())
 
         /// Indices of the requests whose task was cancelled while waiting.
         var cancelledRequests: [Int] { cancelled.withLock { $0 } }
 
-        func load(from input: String) async throws -> String {
-            questions.append(input)
+        func load(question: String) async throws -> ChatAnswer {
+            questions.append(question)
             if let resultForLaterRequests {
                 completions.append(nil)
                 return try resultForLaterRequests.get()
@@ -222,7 +223,7 @@ struct ChatViewModelTests {
             }
         }
 
-        func complete(with result: Result<String, Error>, at index: Int = 0) {
+        func complete(with result: Result<ChatAnswer, Error>, at index: Int = 0) {
             guard completions.indices.contains(index), let completion = completions[index] else {
                 Issue.record("No waiting request at index \(index) to complete")
                 return
@@ -232,11 +233,23 @@ struct ChatViewModelTests {
         }
 
         /// Completes every waiting request, and any that arrive later, with `result`.
-        func completeAllPending(with result: Result<String, Error>) {
+        func completeAllPending(with result: Result<ChatAnswer, Error>) {
             resultForLaterRequests = result
             for index in completions.indices where completions[index] != nil {
                 complete(with: result, at: index)
             }
         }
     }
+}
+
+// File-level, so `@Test(arguments:)` can use them too.
+private func makeAnswer(_ text: String, suggestions: [ChatAnswer.Suggestion] = []) -> ChatAnswer {
+    ChatAnswer(text: text, suggestions: suggestions)
+}
+
+private func makeSuggestion(cardID: Int) -> ChatAnswer.Suggestion {
+    ChatAnswer.Suggestion(
+        card: Card(id: cardID, name: "card \(cardID)"),
+        price: PricePoint(cardID: cardID, date: Date(timeIntervalSince1970: 0), price: Money(amount: 1, currencyCode: "USD"))
+    )
 }

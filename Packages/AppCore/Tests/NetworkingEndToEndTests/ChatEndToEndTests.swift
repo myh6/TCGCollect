@@ -17,15 +17,20 @@ import Networking
 @Suite(.enabled(if: baseURL != nil && apiKey != nil, "Set E2E_BASE_URL and E2E_API_KEY to run end-to-end tests"))
 struct ChatEndToEndTests {
 
-    @Test func load_deliversAnswerFromBackend() async throws {
+    @Test func load_deliversAnswerWithSuggestedCardFromBackend() async throws {
         let question = "What is a Leader card in One Piece TCG?"
         // Same composition the app uses, including its real URLSession.
-        let sut = ChatComposer.makeChatLoader(baseURL: try #require(baseURL), apiKey: try #require(apiKey))
+        let sut = ChatComposer.makeRemoteChatLoader(baseURL: try #require(baseURL), apiKey: try #require(apiKey))
 
-        let answer = try await sut.load(from: question)
+        let answer = try await sut.load(question: question)
 
         // The dev-mode answer echoes the question, which proves it went through the whole round trip.
-        #expect(answer.contains(question))
+        #expect(answer.text.contains(question))
+        // Dev mode always suggests the same sample card.
+        let suggestion = try #require(answer.suggestions.first)
+        #expect(suggestion.card.number == "OP00-000")
+        #expect(suggestion.price.price.amount == Decimal(string: "9.99"))
+        #expect(suggestion.price.price.currencyCode == "USD")
     }
 }
 

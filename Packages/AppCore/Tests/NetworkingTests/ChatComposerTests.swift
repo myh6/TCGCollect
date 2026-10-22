@@ -14,11 +14,11 @@ import os
 @Suite(.serialized)
 struct ChatComposerTests {
 
-    @Test func makeChatLoader_sendsQuestionWithAPIKeyToBaseURL() async throws {
+    @Test func makeRemoteChatLoader_sendsQuestionWithAPIKeyToBaseURL() async throws {
         let session = makeSession(replyingWith: makeAnswerJSON("an answer"))
-        let sut = ChatComposer.makeChatLoader(baseURL: URL(string: "http://base-url.com")!, apiKey: "an api key", session: session)
+        let sut = ChatComposer.makeRemoteChatLoader(baseURL: URL(string: "http://base-url.com")!, apiKey: "an api key", session: session)
 
-        _ = try await sut.load(from: "a question")
+        _ = try await sut.load(question: "a question")
 
         let requests = URLProtocolStub.requests
         #expect(requests.map(\.url) == [URL(string: "http://base-url.com/v1/ask")!])
@@ -26,13 +26,21 @@ struct ChatComposerTests {
         #expect(requests.map { $0.value(forHTTPHeaderField: "X-API-Key") } == ["an api key"])
     }
 
-    @Test func makeChatLoader_deliversAnswerFromBackend() async throws {
-        let session = makeSession(replyingWith: makeAnswerJSON("an answer"))
-        let sut = ChatComposer.makeChatLoader(baseURL: URL(string: "http://base-url.com")!, apiKey: "an api key", session: session)
+    @Test func makeRemoteChatLoader_deliversAnswerWithSuggestionsFromBackend() async throws {
+        let card: [String: Any] = [
+            "card_id": 1,
+            "name": "a card",
+            "current_price": "9.99",
+            "currency": "USD",
+            "current_fetched_at": "2026-01-01T00:00:00+00:00",
+        ]
+        let session = makeSession(replyingWith: makeAnswerJSON("an answer", cards: [card]))
+        let sut = ChatComposer.makeRemoteChatLoader(baseURL: URL(string: "http://base-url.com")!, apiKey: "an api key", session: session)
 
-        let answer = try await sut.load(from: "a question")
+        let answer = try await sut.load(question: "a question")
 
-        #expect(answer == "an answer")
+        #expect(answer.text == "an answer")
+        #expect(answer.suggestions.map(\.card.id) == [1])
     }
 
     // MARK: - Helpers
@@ -43,8 +51,8 @@ struct ChatComposerTests {
         return URLSession(configuration: configuration)
     }
 
-    private func makeAnswerJSON(_ answer: String) -> Data {
-        try! JSONSerialization.data(withJSONObject: ["answer": answer, "cards": []])
+    private func makeAnswerJSON(_ answer: String, cards: [[String: Any]] = []) -> Data {
+        try! JSONSerialization.data(withJSONObject: ["answer": answer, "cards": cards])
     }
 
     /// Replies 200 with the given data to every request and records the requests it saw.
