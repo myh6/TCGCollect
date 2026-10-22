@@ -43,7 +43,7 @@ struct ChatView: View {
             ProgressView("Thinking…")
                 .frame(maxWidth: .infinity)
         case let .loaded(answer):
-            Text(answer)
+            Text(answer.text)
                 .textSelection(.enabled)
         case let .failed(error):
             Label(error.message, systemImage: "exclamationmark.triangle")
@@ -91,10 +91,10 @@ struct ChatUnavailableView: View {
 
 #if DEBUG
 /// Answers previews with a fixed result, or never answers when `result` is nil.
-private nonisolated struct PreviewLoader: ResponseLoader {
-    let result: Result<String, Error>?
+private nonisolated struct PreviewLoader: ChatLoader {
+    let result: Result<ChatAnswer, Error>?
 
-    func load(from input: String) async throws -> String {
+    func load(question: String) async throws -> ChatAnswer {
         guard let result else {
             try await Task.sleep(for: .seconds(3600))
             throw CancellationError()
@@ -118,9 +118,10 @@ private nonisolated struct PreviewLoader: ResponseLoader {
 }
 
 #Preview("Loaded") {
-    let viewModel = ChatViewModel(loader: PreviewLoader(result: .success(
-        "A Leader card starts the game face up and sets your deck's colors. Its life value decides how many cards go into your Life area."
-    )))
+    let viewModel = ChatViewModel(loader: PreviewLoader(result: .success(ChatAnswer(
+        text: "A Leader card starts the game face up and sets your deck's colors. Its life value decides how many cards go into your Life area.",
+        suggestions: []
+    ))))
     NavigationStack {
         ChatView(viewModel: viewModel)
     }
