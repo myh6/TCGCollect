@@ -43,8 +43,13 @@ struct ChatView: View {
             ProgressView("Thinking…")
                 .frame(maxWidth: .infinity)
         case let .loaded(answer):
-            Text(answer.text)
-                .textSelection(.enabled)
+            VStack(alignment: .leading, spacing: 16) {
+                Text(answer.text)
+                    .textSelection(.enabled)
+                if !answer.suggestions.isEmpty {
+                    SuggestedCardsRow(cards: answer.suggestions.map { SuggestedCardPresentation($0) })
+                }
+            }
         case let .failed(error):
             Label(error.message, systemImage: "exclamationmark.triangle")
                 .foregroundStyle(.red)
@@ -120,7 +125,12 @@ private nonisolated struct PreviewLoader: ChatLoader {
 #Preview("Loaded") {
     let viewModel = ChatViewModel(loader: PreviewLoader(result: .success(ChatAnswer(
         text: "A Leader card starts the game face up and sets your deck's colors. Its life value decides how many cards go into your Life area.",
-        suggestions: []
+        suggestions: [
+            Card(id: 1, name: "Monkey.D.Luffy", number: "OP01-024", rarity: "L"),
+            Card(id: 2, name: "Roronoa Zoro", number: "OP01-001", rarity: "L"),
+        ].map { card in
+            ChatAnswer.Suggestion(card: card, price: PricePoint(cardID: card.id, date: .now, price: Money(amount: 4.99, currencyCode: "USD")))
+        }
     ))))
     NavigationStack {
         ChatView(viewModel: viewModel)
