@@ -1,7 +1,8 @@
 name: CI
 
+# Only pull requests into main (each push to an open PR reruns it), plus manual runs.
+# Pushing a branch without a PR doesn't run CI.
 on:
-  push:
   pull_request:
     branches: [main]
   workflow_dispatch:
