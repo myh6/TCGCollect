@@ -19,6 +19,6 @@ public struct ChatResponseLoader: ResponseLoader {
     public func load(from input: String) async throws -> String {
         let request = try ChatEndpoint.sendMessage(input).urlRequest(baseURL: baseURL)
         let (data, response) = try await client.perform(request)
-        return try ChatResponseMapper.map(data, from: response)
+        return try ChatResponseMapper.map(data, from: response).text
     }
 }
