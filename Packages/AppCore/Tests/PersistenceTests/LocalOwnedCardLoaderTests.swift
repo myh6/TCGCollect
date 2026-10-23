@@ -106,7 +106,7 @@ struct LocalOwnedCardLoaderTests {
     }
 
     // MARK: - Helpers
-    private func makeSUT() -> (sut: LocalOwnedCardLoader, store: OwnedCardStoreSpy) {
+    private func makeSUT() -> (sut: OwnedCardCollection, store: OwnedCardStoreSpy) {
         let store = OwnedCardStoreSpy()
         let sut = LocalOwnedCardLoader(store: store)
         return (sut, store)

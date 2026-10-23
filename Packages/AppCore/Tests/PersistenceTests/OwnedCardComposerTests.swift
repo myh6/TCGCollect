@@ -59,7 +59,7 @@ extension SwiftDataStoreFileTests {
             directory.appending(path: "OwnedCards.store")
         }
 
-        private func makeSUT() throws -> LocalOwnedCardLoader {
+        private func makeSUT() throws -> OwnedCardCollection {
             try OwnedCardComposer.makeLocalOwnedCardLoader(storeURL: storeURL)
         }
 
