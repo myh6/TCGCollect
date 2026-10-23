@@ -26,13 +26,25 @@ public actor SwiftDataOwnedCardStore: OwnedCardStore {
     }
 
     public func insert(_ ownedCard: OwnedCard) throws {
-        modelContext.insert(ManagedOwnedCard(ownedCard, position: try nextPosition()))
+        let existing = try managedOwnedCard(withID: ownedCard.id)
+        // A replaced card keeps its place, so editing it doesn't move it in the collection.
+        let position = try existing?.position ?? nextPosition()
+        if let existing {
+            modelContext.delete(existing)
+        }
+        modelContext.insert(ManagedOwnedCard(ownedCard, position: position))
         try modelContext.save()
     }
 
     public func delete(ownedCardID: OwnedCard.ID) throws {
         // Deletes straight from the store file, so there's nothing left to save.
         try modelContext.delete(model: ManagedOwnedCard.self, where: #Predicate { $0.ownedCardID == ownedCardID })
+    }
+
+    private func managedOwnedCard(withID id: OwnedCard.ID) throws -> ManagedOwnedCard? {
+        var descriptor = FetchDescriptor<ManagedOwnedCard>(predicate: #Predicate { $0.ownedCardID == id })
+        descriptor.fetchLimit = 1
+        return try modelContext.fetch(descriptor).first
     }
 
     private func nextPosition() throws -> Int {

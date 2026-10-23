@@ -83,6 +83,41 @@ final class SwiftDataOwnedCardStoreTests {
         #expect(ownedCards == [ownedCard])
     }
 
+    @Test func insert_replacesOwnedCardWithSameID() async throws {
+        let ownedCard = makeOwnedCardWithAllValues()
+        let edited = makeEdited(ownedCard)
+        let sut = try makeSUT()
+        try await sut.insert(ownedCard)
+
+        try await sut.insert(edited)
+
+        #expect(try await sut.retrieveAll() == [edited])
+    }
+
+    @Test func insert_keepsPlaceOfReplacedOwnedCard() async throws {
+        let first = OwnedCard(card: Card(id: 1, name: "a card"))
+        let second = OwnedCard(card: Card(id: 2, name: "another card"))
+        let editedFirst = makeEdited(first)
+        let sut = try makeSUT()
+        try await sut.insert(first)
+        try await sut.insert(second)
+
+        try await sut.insert(editedFirst)
+
+        #expect(try await sut.retrieveAll() == [editedFirst, second])
+    }
+
+    @Test func insert_replacesOwnedCardForAnotherInstanceToo() async throws {
+        let ownedCard = makeOwnedCardWithAllValues()
+        let edited = makeEdited(ownedCard)
+        let sut = try makeSUT()
+        try await sut.insert(ownedCard)
+
+        try await sut.insert(edited)
+
+        #expect(try await makeSUT().retrieveAll() == [edited])
+    }
+
     @Test func delete_removesOnlyOwnedCardWithID() async throws {
         let kept = OwnedCard(card: Card(id: 1, name: "a card"))
         let deleted = OwnedCard(card: Card(id: 2, name: "another card"))
@@ -135,5 +170,13 @@ final class SwiftDataOwnedCardStoreTests {
             purchasePrice: Money(amount: Decimal(string: "12.34")!, currencyCode: "USD"),
             acquiredOn: Date(timeIntervalSince1970: 1_700_000_000)
         )
+    }
+
+    /// The same owned card, i.e. the same `id`, after the user changed what they paid and when.
+    private func makeEdited(_ ownedCard: OwnedCard) -> OwnedCard {
+        var edited = ownedCard
+        edited.purchasePrice = Money(amount: Decimal(string: "56.78")!, currencyCode: "JPY")
+        edited.acquiredOn = Date(timeIntervalSince1970: 1_800_000_000)
+        return edited
     }
 }
