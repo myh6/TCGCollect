@@ -15,6 +15,10 @@ public struct LocalOwnedCardLoader {
         case failed
     }
 
+    public enum SaveError: Error, Equatable {
+        case failed
+    }
+
     private let store: OwnedCardStore
 
     public init(store: OwnedCardStore) {
@@ -26,6 +30,14 @@ public struct LocalOwnedCardLoader {
             return try await store.retrieveAll()
         } catch {
             throw LoadError.failed
+        }
+    }
+
+    public func save(_ ownedCard: OwnedCard) async throws {
+        do {
+            try await store.insert(ownedCard)
+        } catch {
+            throw SaveError.failed
         }
     }
 }
