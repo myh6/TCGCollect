@@ -34,7 +34,7 @@ struct SuggestedCardTile: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
-            image
+            CardImageView(url: card.imageURL)
                 .frame(width: Self.imageSize.width, height: Self.imageSize.height)
                 .clipShape(RoundedRectangle(cornerRadius: 6))
             Text(card.name)
@@ -50,26 +50,6 @@ struct SuggestedCardTile: View {
         }
         .frame(width: Self.imageSize.width, alignment: .leading)
         .accessibilityElement(children: .combine)
-    }
-
-    private var image: some View {
-        AsyncImage(url: card.imageURL) { phase in
-            switch phase {
-            case let .success(image):
-                image.resizable().scaledToFit()
-            case .empty where card.imageURL != nil:
-                placeholder { ProgressView() }
-            default:
-                // No URL, or the image failed to load.
-                placeholder { Image(systemName: "photo").foregroundStyle(.secondary) }
-            }
-        }
-    }
-
-    private func placeholder(@ViewBuilder content: () -> some View) -> some View {
-        RoundedRectangle(cornerRadius: 6)
-            .fill(.quaternary)
-            .overlay(content())
     }
 }
 
