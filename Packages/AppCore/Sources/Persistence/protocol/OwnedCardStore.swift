@@ -13,4 +13,6 @@ public protocol OwnedCardStore {
     func retrieveAll() async throws -> [OwnedCard]
     /// Replaces any stored owned card with the same `id`, so saving an edited card updates it.
     func insert(_ ownedCard: OwnedCard) async throws
+    /// Does nothing when no owned card has `ownedCardID`: either way, it's no longer stored.
+    func delete(ownedCardID: OwnedCard.ID) async throws
 }

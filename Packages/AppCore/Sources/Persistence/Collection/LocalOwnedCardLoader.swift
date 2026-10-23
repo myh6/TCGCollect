@@ -19,6 +19,10 @@ public struct LocalOwnedCardLoader {
         case failed
     }
 
+    public enum RemoveError: Error, Equatable {
+        case failed
+    }
+
     private let store: OwnedCardStore
 
     public init(store: OwnedCardStore) {
@@ -38,6 +42,14 @@ public struct LocalOwnedCardLoader {
             try await store.insert(ownedCard)
         } catch {
             throw SaveError.failed
+        }
+    }
+
+    public func remove(ownedCardID: OwnedCard.ID) async throws {
+        do {
+            try await store.delete(ownedCardID: ownedCardID)
+        } catch {
+            throw RemoveError.failed
         }
     }
 }

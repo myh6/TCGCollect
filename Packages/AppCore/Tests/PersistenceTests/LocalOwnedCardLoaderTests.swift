@@ -80,6 +80,31 @@ struct LocalOwnedCardLoaderTests {
         try await sut.save(makeOwnedCard(cardID: 1))
     }
 
+    @Test func remove_deletesOwnedCardWithIDFromStore() async {
+        let id = UUID()
+        let (sut, store) = makeSUT()
+
+        try? await sut.remove(ownedCardID: id)
+
+        #expect(store.messages == [.delete(id)])
+    }
+
+    @Test func remove_failsOnStoreDeletionError() async {
+        let (sut, store) = makeSUT()
+        store.deletionResult = .failure(anyNSError())
+
+        await #expect(throws: LocalOwnedCardLoader.RemoveError.failed) {
+            try await sut.remove(ownedCardID: UUID())
+        }
+    }
+
+    @Test func remove_succeedsOnStoreDeletionSuccess() async throws {
+        let (sut, store) = makeSUT()
+        store.deletionResult = .success(())
+
+        try await sut.remove(ownedCardID: UUID())
+    }
+
     // MARK: - Helpers
     private func makeSUT() -> (sut: LocalOwnedCardLoader, store: OwnedCardStoreSpy) {
         let store = OwnedCardStoreSpy()
@@ -95,11 +120,13 @@ struct LocalOwnedCardLoaderTests {
         enum Message: Equatable {
             case retrieveAll
             case insert(OwnedCard)
+            case delete(OwnedCard.ID)
         }
 
         private(set) var messages = [Message]()
         var retrievalResult: Result<[OwnedCard], Error> = .success([])
         var insertionResult: Result<Void, Error> = .success(())
+        var deletionResult: Result<Void, Error> = .success(())
 
         func retrieveAll() async throws -> [OwnedCard] {
             messages.append(.retrieveAll)
@@ -109,6 +136,11 @@ struct LocalOwnedCardLoaderTests {
         func insert(_ ownedCard: OwnedCard) async throws {
             messages.append(.insert(ownedCard))
             try insertionResult.get()
+        }
+
+        func delete(ownedCardID: OwnedCard.ID) async throws {
+            messages.append(.delete(ownedCardID))
+            try deletionResult.get()
         }
     }
 }
