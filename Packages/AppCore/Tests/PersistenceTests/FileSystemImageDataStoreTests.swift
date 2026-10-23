@@ -100,7 +100,7 @@ final class FileSystemImageDataStoreTests {
         }
     }
 
-    private func makeSUT() -> FileSystemImageDataStore {
+    private func makeSUT() -> ImageDataStore {
         FileSystemImageDataStore(directory: directory)
     }
 

@@ -96,7 +96,7 @@ final class URLSessionHTTPClientTests {
     }
 
     //MARK: - Helpers
-    private func makeSUT(sourceLocation: SourceLocation = #_sourceLocation) -> URLSessionHTTPClient {
+    private func makeSUT(sourceLocation: SourceLocation = #_sourceLocation) -> NetworkClient {
         let config = URLSessionConfiguration.ephemeral
         config.protocolClasses = [URLProtocolStub.self]
         let session = URLSession(configuration: config)

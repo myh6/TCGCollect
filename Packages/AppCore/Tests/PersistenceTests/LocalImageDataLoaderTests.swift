@@ -7,6 +7,7 @@
 
 import Foundation
 import Testing
+import Domain
 @testable import Persistence
 import TestHelpers
 
@@ -82,7 +83,7 @@ struct LocalImageDataLoaderTests {
     }
 
     // MARK: - Helpers
-    private func makeSUT() -> (sut: LocalImageDataLoader, store: ImageDataStoreSpy) {
+    private func makeSUT() -> (sut: ImageDataLoader & ImageDataCache, store: ImageDataStoreSpy) {
         let store = ImageDataStoreSpy()
         let sut = LocalImageDataLoader(store: store)
         return (sut, store)

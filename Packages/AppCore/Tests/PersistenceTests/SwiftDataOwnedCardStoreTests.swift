@@ -150,7 +150,7 @@ extension SwiftDataStoreFileTests {
         }
 
         // MARK: - Helpers
-        private func makeSUT() throws -> SwiftDataOwnedCardStore {
+        private func makeSUT() throws -> OwnedCardStore {
             try SwiftDataOwnedCardStore(storeURL: directory.appending(path: "OwnedCards.store"))
         }
 
