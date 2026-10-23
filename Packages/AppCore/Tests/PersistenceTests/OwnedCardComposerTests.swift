@@ -21,7 +21,7 @@ extension SwiftDataStoreFileTests {
             try? FileManager.default.removeItem(at: directory)
         }
 
-        @Test func makeLocalOwnedCardLoader_keepsOwnedCardsInFileAtStoreURL() async throws {
+        @Test func makeLocalOwnedCardCollection_keepsOwnedCardsInFileAtStoreURL() async throws {
             let sut = try makeSUT()
 
             try await sut.save(makeOwnedCard(cardID: 1))
@@ -29,8 +29,8 @@ extension SwiftDataStoreFileTests {
             #expect(FileManager.default.fileExists(atPath: storeURL.path()))
         }
 
-        // Like the app starting again: a loader made later on the same file finds what was saved before.
-        @Test func makeLocalOwnedCardLoader_deliversOwnedCardsSavedByAnotherLoader() async throws {
+        // Like the app starting again: a collection made later on the same file finds what was saved before.
+        @Test func makeLocalOwnedCardCollection_deliversOwnedCardsSavedByAnotherCollection() async throws {
             let ownedCards = [makeOwnedCard(cardID: 1), makeOwnedCard(cardID: 2)]
             let saver = try makeSUT()
             for ownedCard in ownedCards {
@@ -42,7 +42,7 @@ extension SwiftDataStoreFileTests {
             #expect(loaded == ownedCards)
         }
 
-        @Test func makeLocalOwnedCardLoader_doesNotDeliverOwnedCardRemovedByAnotherLoader() async throws {
+        @Test func makeLocalOwnedCardCollection_doesNotDeliverOwnedCardRemovedByAnotherCollection() async throws {
             let kept = makeOwnedCard(cardID: 1)
             let removed = makeOwnedCard(cardID: 2)
             let sut = try makeSUT()
@@ -60,7 +60,7 @@ extension SwiftDataStoreFileTests {
         }
 
         private func makeSUT() throws -> OwnedCardCollection {
-            try OwnedCardComposer.makeLocalOwnedCardLoader(storeURL: storeURL)
+            try OwnedCardComposer.makeLocalOwnedCardCollection(storeURL: storeURL)
         }
 
         private func makeOwnedCard(cardID: Int) -> OwnedCard {
