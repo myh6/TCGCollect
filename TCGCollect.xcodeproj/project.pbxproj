@@ -35,6 +35,7 @@
 		0F5A73613080C60600B42482 /* Networking.xctestplan */ = {isa = PBXFileReference; lastKnownFileType = text; name = Networking.xctestplan; path = Packages/AppCore/Networking.xctestplan; sourceTree = "<group>"; };
 		0F5A739630889D9C00B42482 /* TCGCollect.xctestplan */ = {isa = PBXFileReference; lastKnownFileType = text; path = TCGCollect.xctestplan; sourceTree = "<group>"; };
 		0F5A73973088A1A600B42482 /* ci.sh */ = {isa = PBXFileReference; lastKnownFileType = text.script.sh; path = ci.sh; sourceTree = "<group>"; };
+		0F5A73BD308A895000B42482 /* AppCore.xctestplan */ = {isa = PBXFileReference; lastKnownFileType = text; name = AppCore.xctestplan; path = Packages/AppCore.xctestplan; sourceTree = "<group>"; };
 		0F5A7400308A000000B42482 /* Secrets.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Secrets.xcconfig; sourceTree = "<group>"; };
 		0F5A7401308A000000B42482 /* Secrets.example.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Secrets.example.xcconfig; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -86,6 +87,7 @@
 		0F049635307CFDDD00378952 = {
 			isa = PBXGroup;
 			children = (
+				0F5A73BD308A895000B42482 /* AppCore.xctestplan */,
 				0F5A73983088A1A600B42482 /* scripts */,
 				0F5A739630889D9C00B42482 /* TCGCollect.xctestplan */,
 				0F5A7400308A000000B42482 /* Secrets.xcconfig */,

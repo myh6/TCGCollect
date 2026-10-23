@@ -27,6 +27,8 @@ struct TCGCollectApp: App {
 
     // Owned here, not by ChatView, so a request and its answer survive switching tabs.
     @State private var chatViewModel = Self.makeChatViewModel()
+    // One for the whole app, so every screen shares the images already in memory.
+    @State private var imageLoader = Self.makeImageLoader()
 
     var body: some Scene {
         WindowGroup {
@@ -44,6 +46,7 @@ struct TCGCollectApp: App {
                     ContentView()
                 }
             }
+            .environment(\.imageLoader, imageLoader)
         }
         .modelContainer(sharedModelContainer)
     }
@@ -58,5 +61,15 @@ struct TCGCollectApp: App {
             Logger(subsystem: "TCGCollect", category: "Chat").error("Chat unavailable: \(String(describing: error))")
             return nil
         }
+    }
+
+    /// Memory first, then the disk cache, then the network; downloads are saved to disk for next time.
+    private static func makeImageLoader() -> ImageLoader {
+        let cacheDirectory = URL.cachesDirectory.appending(path: "CardImages", directoryHint: .isDirectory)
+        let dataLoader = CachedImageComposer.makeImageDataLoader(
+            remote: ImageComposer.makeRemoteImageDataLoader(),
+            cacheDirectory: cacheDirectory
+        )
+        return ImageLoader(dataLoader: dataLoader, memoryCache: ImageMemoryCache())
     }
 }

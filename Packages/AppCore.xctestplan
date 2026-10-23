@@ -1,0 +1,33 @@
+{
+  "configurations" : [
+    {
+      "id" : "78289570-F8A9-413D-8532-D7A093134B4F",
+      "name" : "Test Scheme Action",
+      "options" : {
+
+      }
+    }
+  ],
+  "defaultOptions" : {
+    "codeCoverage" : {
+      "targets" : [
+        {
+          "containerPath" : "container:",
+          "identifier" : "AppCore",
+          "name" : "AppCore"
+        }
+      ]
+    },
+    "performanceAntipatternCheckerEnabled" : true
+  },
+  "testTargets" : [
+    {
+      "target" : {
+        "containerPath" : "container:",
+        "identifier" : "AppCoreTests",
+        "name" : "AppCoreTests"
+      }
+    }
+  ],
+  "version" : 1
+}

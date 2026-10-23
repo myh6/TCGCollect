@@ -41,6 +41,10 @@ let package = Package(
             path: "Tests/TestHelpers"
         ),
         .testTarget(
+            name: "AppCoreTests",
+            dependencies: ["AppCore", "TestHelpers"]
+        ),
+        .testTarget(
             name: "NetworkingTests",
             dependencies: ["Networking", "TestHelpers"]
         ),
