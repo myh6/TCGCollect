@@ -19,12 +19,15 @@ struct TCGCollectApp: App {
     @State private var ownedCardCollection: OwnedCardCollection?
     // Owned here so what was added stays marked as added after switching tabs.
     @State private var addToCollectionViewModel: AddToCollectionViewModel?
+    // Owned here so the cards stay on screen while the tab reloads them.
+    @State private var collectionViewModel: CollectionViewModel?
 
     init() {
         // Both from the same collection, so the app never opens the store twice.
         let collection = Self.makeOwnedCardCollection()
         _ownedCardCollection = State(initialValue: collection)
         _addToCollectionViewModel = State(initialValue: collection.map { AddToCollectionViewModel(saver: $0) })
+        _collectionViewModel = State(initialValue: collection.map { CollectionViewModel(loader: $0) })
     }
 
     var body: some Scene {
@@ -40,8 +43,13 @@ struct TCGCollectApp: App {
                     }
                 }
                 Tab("Collection", systemImage: "rectangle.stack") {
-                    // Until the collection grid replaces it.
-                    ContentUnavailableView("No Cards Yet", systemImage: "rectangle.stack")
+                    NavigationStack {
+                        if let collectionViewModel {
+                            CollectionView(viewModel: collectionViewModel)
+                        } else {
+                            CollectionUnavailableView()
+                        }
+                    }
                 }
             }
             .environment(\.imageLoader, imageLoader)
