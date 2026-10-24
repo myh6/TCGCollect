@@ -29,6 +29,8 @@ struct TCGCollectApp: App {
     @State private var chatViewModel = Self.makeChatViewModel()
     // One for the whole app, so every screen shares the images already in memory.
     @State private var imageLoader = Self.makeImageLoader()
+    // Only one for the whole app: Core Data can crash if several new store files are set up at the same moment.
+    @State private var ownedCardCollection = Self.makeOwnedCardCollection()
 
     var body: some Scene {
         WindowGroup {
@@ -71,5 +73,17 @@ struct TCGCollectApp: App {
             cacheDirectory: cacheDirectory
         )
         return ImageLoader(dataLoader: dataLoader, memoryCache: ImageMemoryCache())
+    }
+
+    /// Kept in Application Support, not Caches, since the system may clear Caches but a collection must never disappear.
+    /// nil when the store can't be opened, so the rest of the app still works.
+    private static func makeOwnedCardCollection() -> OwnedCardCollection? {
+        let storeURL = URL.applicationSupportDirectory.appending(path: "Collection/OwnedCards.store")
+        do {
+            return try OwnedCardComposer.makeLocalOwnedCardCollection(storeURL: storeURL)
+        } catch {
+            Logger(subsystem: "TCGCollect", category: "Collection").error("Collection unavailable: \(String(describing: error))")
+            return nil
+        }
     }
 }
