@@ -22,8 +22,7 @@ nonisolated struct SuggestedCardPresentation: Identifiable, Equatable {
         let price = suggestion.price.price
         id = card.id
         name = card.name
-        let detailParts = [card.number, card.rarity].compactMap { $0 }
-        details = detailParts.isEmpty ? nil : detailParts.joined(separator: " · ")
+        details = card.numberAndRarity
         self.price = price.amount.formatted(.currency(code: price.currencyCode).locale(locale))
         imageURL = card.imageURL
     }
