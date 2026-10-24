@@ -39,7 +39,7 @@ public struct LocalOwnedCardLoader: OwnedCardLoader, OwnedCardSaver, OwnedCardRe
 
     public func save(_ ownedCard: OwnedCard) async throws {
         do {
-            try await store.insert(ownedCard)
+            try await store.insert([ownedCard])
         } catch {
             throw SaveError.failed
         }
