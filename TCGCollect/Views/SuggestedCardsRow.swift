@@ -11,12 +11,17 @@ import AppCore
 /// The cards a chat answer refers to, in the order the backend sent them.
 struct SuggestedCardsRow: View {
     let cards: [SuggestedCardPresentation]
+    /// How adding each card to the collection is going, or nil to show no add button, e.g. without a collection.
+    var addStatus: (Card.ID) -> AddToCollectionViewModel.Status? = { _ in nil }
+    var onAdd: (Card.ID) -> Void = { _ in }
 
     var body: some View {
         ScrollView(.horizontal) {
             HStack(alignment: .top, spacing: 12) {
                 ForEach(cards) { card in
-                    SuggestedCardTile(card: card)
+                    SuggestedCardTile(card: card, addStatus: addStatus(card.id)) {
+                        onAdd(card.id)
+                    }
                 }
             }
         }
@@ -28,11 +33,24 @@ struct SuggestedCardsRow: View {
 
 struct SuggestedCardTile: View {
     let card: SuggestedCardPresentation
+    var addStatus: AddToCollectionViewModel.Status?
+    var onAdd: () -> Void = {}
 
     // A trading card's 63 × 88 mm shape.
     private static let imageSize = CGSize(width: 120, height: 168)
 
     var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            details
+            if let addStatus {
+                AddToCollectionButton(status: addStatus, action: onAdd)
+            }
+        }
+        .frame(width: Self.imageSize.width, alignment: .leading)
+    }
+
+    // Read as one element by VoiceOver, apart from the button so it stays its own control.
+    private var details: some View {
         VStack(alignment: .leading, spacing: 4) {
             CardImageView(url: card.imageURL)
                 .frame(width: Self.imageSize.width, height: Self.imageSize.height)
@@ -48,8 +66,34 @@ struct SuggestedCardTile: View {
             Text(card.price)
                 .font(.caption.monospacedDigit())
         }
-        .frame(width: Self.imageSize.width, alignment: .leading)
         .accessibilityElement(children: .combine)
+    }
+}
+
+struct AddToCollectionButton: View {
+    let status: AddToCollectionViewModel.Status
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            switch status {
+            case .notAdded:
+                Label("Add", systemImage: "plus")
+            case .adding:
+                ProgressView()
+                    .controlSize(.mini)
+                    .accessibilityLabel("Adding")
+            case .added:
+                Label("Added", systemImage: "checkmark")
+            case .failed:
+                Label("Retry", systemImage: "arrow.clockwise")
+            }
+        }
+        .buttonStyle(.bordered)
+        .controlSize(.small)
+        .tint(status == .failed ? .red : nil)
+        .disabled(status == .adding || status == .added)
+        .frame(maxWidth: .infinity)
     }
 }
 

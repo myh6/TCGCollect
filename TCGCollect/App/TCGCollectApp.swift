@@ -16,7 +16,16 @@ struct TCGCollectApp: App {
     // One for the whole app, so every screen shares the images already in memory.
     @State private var imageLoader = Self.makeImageLoader()
     // Only one for the whole app: Core Data can crash if several new store files are set up at the same moment.
-    @State private var ownedCardCollection = Self.makeOwnedCardCollection()
+    @State private var ownedCardCollection: OwnedCardCollection?
+    // Owned here so what was added stays marked as added after switching tabs.
+    @State private var addToCollectionViewModel: AddToCollectionViewModel?
+
+    init() {
+        // Both from the same collection, so the app never opens the store twice.
+        let collection = Self.makeOwnedCardCollection()
+        _ownedCardCollection = State(initialValue: collection)
+        _addToCollectionViewModel = State(initialValue: collection.map { AddToCollectionViewModel(saver: $0) })
+    }
 
     var body: some Scene {
         WindowGroup {
@@ -24,7 +33,7 @@ struct TCGCollectApp: App {
                 Tab("Chat", systemImage: "bubble.left.and.text.bubble.right") {
                     NavigationStack {
                         if let chatViewModel {
-                            ChatView(viewModel: chatViewModel)
+                            ChatView(viewModel: chatViewModel, addToCollection: addToCollectionViewModel)
                         } else {
                             ChatUnavailableView()
                         }
