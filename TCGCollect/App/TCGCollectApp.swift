@@ -6,25 +6,11 @@
 //
 
 import SwiftUI
-import SwiftData
 import AppCore
 import os
 
 @main
 struct TCGCollectApp: App {
-    var sharedModelContainer: ModelContainer = {
-        let schema = Schema([
-            Item.self,
-        ])
-        let modelConfiguration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false)
-
-        do {
-            return try ModelContainer(for: schema, configurations: [modelConfiguration])
-        } catch {
-            fatalError("Could not create ModelContainer: \(error)")
-        }
-    }()
-
     // Owned here, not by ChatView, so a request and its answer survive switching tabs.
     @State private var chatViewModel = Self.makeChatViewModel()
     // One for the whole app, so every screen shares the images already in memory.
@@ -45,12 +31,12 @@ struct TCGCollectApp: App {
                     }
                 }
                 Tab("Collection", systemImage: "rectangle.stack") {
-                    ContentView()
+                    // Until the collection grid replaces it.
+                    ContentUnavailableView("No Cards Yet", systemImage: "rectangle.stack")
                 }
             }
             .environment(\.imageLoader, imageLoader)
         }
-        .modelContainer(sharedModelContainer)
     }
 
     /// nil when the backend isn't configured, e.g. in Release builds for now.
