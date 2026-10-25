@@ -52,6 +52,9 @@ struct ChatView: View {
                     SuggestedCardsRow(
                         cards: answer.suggestions.map { SuggestedCardPresentation($0) },
                         addStatus: { addToCollection?.status(for: $0) },
+                        copies: { addToCollection?.copies(for: $0) ?? 1 },
+                        onIncrementCopies: { addToCollection?.incrementCopies(for: $0) },
+                        onDecrementCopies: { addToCollection?.decrementCopies(for: $0) },
                         onAdd: { add(cardID: $0, from: answer) }
                     )
                 }

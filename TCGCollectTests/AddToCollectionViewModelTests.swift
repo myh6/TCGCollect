@@ -18,7 +18,7 @@ struct AddToCollectionViewModelTests {
     @Test func init_doesNotSaveAndShowsCardsAsNotAdded() {
         let (sut, saver) = makeSUT()
 
-        #expect(saver.savedOwnedCards.isEmpty)
+        #expect(saver.saves.isEmpty)
         #expect(sut.status(for: 1) == .notAdded)
     }
 
@@ -28,7 +28,99 @@ struct AddToCollectionViewModelTests {
 
         await add(card, to: sut, saver: saver, completingWith: .success(()))
 
-        #expect(saver.savedOwnedCards.map(\.card) == [card])
+        #expect(saver.saves.map { $0.map(\.card) } == [[card]])
+    }
+
+    @Test func add_savesOneOwnedCardPerCopyInOneSave() async throws {
+        let card = makeCard(id: 1)
+        let (sut, saver) = makeSUT()
+        sut.incrementCopies(for: card.id)
+        sut.incrementCopies(for: card.id)
+
+        await add(card, to: sut, saver: saver, completingWith: .success(()))
+
+        let save = try #require(saver.saves.first)
+        #expect(saver.saves.count == 1)
+        #expect(save.map(\.card) == [card, card, card])
+        // Each copy is its own owned card, so it can be edited or removed on its own later.
+        #expect(Set(save.map(\.id)).count == 3)
+    }
+
+    @Test func copies_isOneForCardNotChangedYet() {
+        let (sut, _) = makeSUT()
+
+        #expect(sut.copies(for: 1) == 1)
+    }
+
+    @Test func incrementCopies_addsOneUpToNine() {
+        let (sut, _) = makeSUT()
+
+        sut.incrementCopies(for: 1)
+        #expect(sut.copies(for: 1) == 2)
+
+        for _ in 0..<10 {
+            sut.incrementCopies(for: 1)
+        }
+        #expect(sut.copies(for: 1) == 9)
+    }
+
+    @Test func decrementCopies_removesOneDownToOne() {
+        let (sut, _) = makeSUT()
+        sut.incrementCopies(for: 1)
+        sut.incrementCopies(for: 1)
+
+        sut.decrementCopies(for: 1)
+        #expect(sut.copies(for: 1) == 2)
+
+        sut.decrementCopies(for: 1)
+        sut.decrementCopies(for: 1)
+        #expect(sut.copies(for: 1) == 1)
+    }
+
+    @Test func incrementCopies_onlyChangesCopiesOfThatCard() {
+        let (sut, _) = makeSUT()
+
+        sut.incrementCopies(for: 1)
+
+        #expect(sut.copies(for: 2) == 1)
+    }
+
+    // The count shown while saving, and once added, must stay the count that was saved.
+    @Test func changingCopies_doesNothingWhileCardIsBeingAdded() async {
+        let card = makeCard(id: 1)
+        let (sut, saver) = makeSUT()
+        sut.incrementCopies(for: card.id)
+        let adding = await startAdding(card, to: sut, saver: saver)
+
+        sut.incrementCopies(for: card.id)
+        #expect(sut.copies(for: card.id) == 2)
+        sut.decrementCopies(for: card.id)
+        #expect(sut.copies(for: card.id) == 2)
+
+        saver.complete(with: .success(()))
+        await adding.value
+    }
+
+    @Test func changingCopies_doesNothingOnceCardIsAdded() async {
+        let card = makeCard(id: 1)
+        let (sut, saver) = makeSUT()
+        sut.incrementCopies(for: card.id)
+        await add(card, to: sut, saver: saver, completingWith: .success(()))
+
+        sut.incrementCopies(for: card.id)
+        #expect(sut.copies(for: card.id) == 2)
+        sut.decrementCopies(for: card.id)
+        #expect(sut.copies(for: card.id) == 2)
+    }
+
+    @Test func changingCopies_worksAgainAfterAddingFailed() async {
+        let card = makeCard(id: 1)
+        let (sut, saver) = makeSUT()
+        await add(card, to: sut, saver: saver, completingWith: .failure(anyError()))
+
+        sut.incrementCopies(for: card.id)
+
+        #expect(sut.copies(for: card.id) == 2)
     }
 
     @Test func add_showsCardAsAddingWhileSaving() async {
@@ -77,7 +169,7 @@ struct AddToCollectionViewModelTests {
         // In its own task: if it wrongly reached the saver, awaiting it here would never return.
         let secondAdding = Task { await sut.add(card) }
         await giveTimeToReachSaver(saver, saveCount: 2)
-        #expect(saver.savedOwnedCards.count == 1)
+        #expect(saver.saves.count == 1)
 
         saver.completeAllPending(with: .success(()))
         await firstAdding.value
@@ -91,7 +183,7 @@ struct AddToCollectionViewModelTests {
 
         let secondAdding = Task { await sut.add(card) }
         await giveTimeToReachSaver(saver, saveCount: 2)
-        #expect(saver.savedOwnedCards.count == 1)
+        #expect(saver.saves.count == 1)
         #expect(sut.status(for: 1) == .added)
 
         saver.completeAllPending(with: .success(()))
@@ -129,17 +221,17 @@ struct AddToCollectionViewModelTests {
     /// Starts adding `card` and returns once the saver has received save number `index`, which is still waiting.
     private func startAdding(_ card: Card, to sut: AddToCollectionViewModel, saver: SaverSpy, at index: Int = 0) async -> Task<Void, Never> {
         let adding = Task { await sut.add(card) }
-        for _ in 0..<1_000 where saver.savedOwnedCards.count <= index {
+        for _ in 0..<1_000 where saver.saves.count <= index {
             await Task.yield()
         }
-        #expect(saver.savedOwnedCards.count == index + 1, "Expected the saver to receive save \(index)")
+        #expect(saver.saves.count == index + 1, "Expected the saver to receive save \(index)")
         return adding
     }
 
     /// For an add that should be ignored: waits a bounded time for the saver to get `saveCount` saves anyway,
     /// so an add that wrongly goes through has the chance to show up before the test checks.
     private func giveTimeToReachSaver(_ saver: SaverSpy, saveCount: Int) async {
-        for _ in 0..<1_000 where saver.savedOwnedCards.count < saveCount {
+        for _ in 0..<1_000 where saver.saves.count < saveCount {
             await Task.yield()
         }
     }
@@ -152,14 +244,14 @@ struct AddToCollectionViewModelTests {
 
     /// Holds every `save` call until the test completes it, so tests can look at the in-between state.
     private final class SaverSpy: OwnedCardSaver {
-        private(set) var savedOwnedCards = [OwnedCard]()
+        private(set) var saves = [[OwnedCard]]()
         // nil once completed, so no save is resumed twice.
         private var completions = [CheckedContinuation<Void, Error>?]()
         // Set by completeAllPending, so a save that arrives late doesn't wait forever.
         private var resultForLaterSaves: Result<Void, Error>?
 
-        func save(_ ownedCard: OwnedCard) async throws {
-            savedOwnedCards.append(ownedCard)
+        func save(_ ownedCards: [OwnedCard]) async throws {
+            saves.append(ownedCards)
             if let resultForLaterSaves {
                 completions.append(nil)
                 return try resultForLaterSaves.get()

@@ -24,7 +24,7 @@ extension SwiftDataStoreFileTests {
         @Test func makeLocalOwnedCardCollection_keepsOwnedCardsInFileAtStoreURL() async throws {
             let sut = try makeSUT()
 
-            try await sut.save(makeOwnedCard(cardID: 1))
+            try await sut.save([makeOwnedCard(cardID: 1)])
 
             #expect(FileManager.default.fileExists(atPath: storeURL.path()))
         }
@@ -33,9 +33,7 @@ extension SwiftDataStoreFileTests {
         @Test func makeLocalOwnedCardCollection_deliversOwnedCardsSavedByAnotherCollection() async throws {
             let ownedCards = [makeOwnedCard(cardID: 1), makeOwnedCard(cardID: 2)]
             let saver = try makeSUT()
-            for ownedCard in ownedCards {
-                try await saver.save(ownedCard)
-            }
+            try await saver.save(ownedCards)
 
             let loaded = try await makeSUT().load()
 
@@ -46,8 +44,7 @@ extension SwiftDataStoreFileTests {
             let kept = makeOwnedCard(cardID: 1)
             let removed = makeOwnedCard(cardID: 2)
             let sut = try makeSUT()
-            try await sut.save(kept)
-            try await sut.save(removed)
+            try await sut.save([kept, removed])
 
             try await sut.remove(ownedCardID: removed.id)
 

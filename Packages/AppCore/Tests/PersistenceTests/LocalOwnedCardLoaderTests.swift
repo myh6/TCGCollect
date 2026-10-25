@@ -55,13 +55,13 @@ struct LocalOwnedCardLoaderTests {
         #expect(ownedCards == storedCards)
     }
 
-    @Test func save_insertsOwnedCardIntoStore() async {
-        let ownedCard = makeOwnedCard(cardID: 1)
+    @Test func save_insertsOwnedCardsIntoStoreAsOneBatch() async {
+        let ownedCards = [makeOwnedCard(cardID: 1), makeOwnedCard(cardID: 1), makeOwnedCard(cardID: 2)]
         let (sut, store) = makeSUT()
 
-        try? await sut.save(ownedCard)
+        try? await sut.save(ownedCards)
 
-        #expect(store.messages == [.insert([ownedCard])])
+        #expect(store.messages == [.insert(ownedCards)])
     }
 
     @Test func save_failsOnStoreInsertionError() async {
@@ -69,7 +69,7 @@ struct LocalOwnedCardLoaderTests {
         store.insertionResult = .failure(anyNSError())
 
         await #expect(throws: LocalOwnedCardLoader.SaveError.failed) {
-            try await sut.save(makeOwnedCard(cardID: 1))
+            try await sut.save([makeOwnedCard(cardID: 1)])
         }
     }
 
@@ -77,7 +77,7 @@ struct LocalOwnedCardLoaderTests {
         let (sut, store) = makeSUT()
         store.insertionResult = .success(())
 
-        try await sut.save(makeOwnedCard(cardID: 1))
+        try await sut.save([makeOwnedCard(cardID: 1)])
     }
 
     @Test func remove_deletesOwnedCardWithIDFromStore() async {
