@@ -21,33 +21,30 @@ extension SwiftDataStoreFileTests {
             try? FileManager.default.removeItem(at: directory)
         }
 
-        @Test func makeLocalOwnedCardLoader_keepsOwnedCardsInFileAtStoreURL() async throws {
+        @Test func makeLocalOwnedCardCollection_keepsOwnedCardsInFileAtStoreURL() async throws {
             let sut = try makeSUT()
 
-            try await sut.save(makeOwnedCard(cardID: 1))
+            try await sut.save([makeOwnedCard(cardID: 1)])
 
             #expect(FileManager.default.fileExists(atPath: storeURL.path()))
         }
 
-        // Like the app starting again: a loader made later on the same file finds what was saved before.
-        @Test func makeLocalOwnedCardLoader_deliversOwnedCardsSavedByAnotherLoader() async throws {
+        // Like the app starting again: a collection made later on the same file finds what was saved before.
+        @Test func makeLocalOwnedCardCollection_deliversOwnedCardsSavedByAnotherCollection() async throws {
             let ownedCards = [makeOwnedCard(cardID: 1), makeOwnedCard(cardID: 2)]
             let saver = try makeSUT()
-            for ownedCard in ownedCards {
-                try await saver.save(ownedCard)
-            }
+            try await saver.save(ownedCards)
 
             let loaded = try await makeSUT().load()
 
             #expect(loaded == ownedCards)
         }
 
-        @Test func makeLocalOwnedCardLoader_doesNotDeliverOwnedCardRemovedByAnotherLoader() async throws {
+        @Test func makeLocalOwnedCardCollection_doesNotDeliverOwnedCardRemovedByAnotherCollection() async throws {
             let kept = makeOwnedCard(cardID: 1)
             let removed = makeOwnedCard(cardID: 2)
             let sut = try makeSUT()
-            try await sut.save(kept)
-            try await sut.save(removed)
+            try await sut.save([kept, removed])
 
             try await sut.remove(ownedCardID: removed.id)
 
@@ -59,8 +56,8 @@ extension SwiftDataStoreFileTests {
             directory.appending(path: "OwnedCards.store")
         }
 
-        private func makeSUT() throws -> LocalOwnedCardLoader {
-            try OwnedCardComposer.makeLocalOwnedCardLoader(storeURL: storeURL)
+        private func makeSUT() throws -> OwnedCardCollection {
+            try OwnedCardComposer.makeLocalOwnedCardCollection(storeURL: storeURL)
         }
 
         private func makeOwnedCard(cardID: Int) -> OwnedCard {

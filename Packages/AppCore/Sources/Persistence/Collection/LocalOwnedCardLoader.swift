@@ -10,7 +10,7 @@ import Domain
 
 /// The owned cards kept on this device. Store errors become this type's own errors,
 /// so callers never depend on how the store keeps them.
-public struct LocalOwnedCardLoader {
+public struct LocalOwnedCardLoader: OwnedCardLoader, OwnedCardSaver, OwnedCardRemover {
     public enum LoadError: Error, Equatable {
         case failed
     }
@@ -37,9 +37,9 @@ public struct LocalOwnedCardLoader {
         }
     }
 
-    public func save(_ ownedCard: OwnedCard) async throws {
+    public func save(_ ownedCards: [OwnedCard]) async throws {
         do {
-            try await store.insert(ownedCard)
+            try await store.insert(ownedCards)
         } catch {
             throw SaveError.failed
         }

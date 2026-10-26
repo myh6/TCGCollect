@@ -12,6 +12,8 @@ import AppCore
 /// even when they switch tabs: LLM and tool calls can take a while.
 struct ChatView: View {
     let viewModel: ChatViewModel
+    /// nil when there's no collection to add to, so suggested cards show no add button.
+    var addToCollection: AddToCollectionViewModel? = nil
     // Kept after sending, so the user can see what they asked and edit it.
     @State private var question = ""
     @FocusState private var isQuestionFocused: Bool
@@ -47,7 +49,14 @@ struct ChatView: View {
                 Text(answer.text)
                     .textSelection(.enabled)
                 if !answer.suggestions.isEmpty {
-                    SuggestedCardsRow(cards: answer.suggestions.map { SuggestedCardPresentation($0) })
+                    SuggestedCardsRow(
+                        cards: answer.suggestions.map { SuggestedCardPresentation($0) },
+                        addStatus: { addToCollection?.status(for: $0) },
+                        copies: { addToCollection?.copies(for: $0) ?? 1 },
+                        onIncrementCopies: { addToCollection?.incrementCopies(for: $0) },
+                        onDecrementCopies: { addToCollection?.decrementCopies(for: $0) },
+                        onAdd: { add(cardID: $0, from: answer) }
+                    )
                 }
             }
         case let .failed(error):
@@ -73,6 +82,11 @@ struct ChatView: View {
         }
         .labelStyle(.iconOnly)
         .font(.title2)
+    }
+
+    private func add(cardID: Card.ID, from answer: ChatAnswer) {
+        guard let addToCollection, let card = answer.suggestions.first(where: { $0.card.id == cardID })?.card else { return }
+        Task { await addToCollection.add(card) }
     }
 
     private func send() {

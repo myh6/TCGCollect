@@ -55,13 +55,13 @@ struct LocalOwnedCardLoaderTests {
         #expect(ownedCards == storedCards)
     }
 
-    @Test func save_insertsOwnedCardIntoStore() async {
-        let ownedCard = makeOwnedCard(cardID: 1)
+    @Test func save_insertsOwnedCardsIntoStoreAsOneBatch() async {
+        let ownedCards = [makeOwnedCard(cardID: 1), makeOwnedCard(cardID: 1), makeOwnedCard(cardID: 2)]
         let (sut, store) = makeSUT()
 
-        try? await sut.save(ownedCard)
+        try? await sut.save(ownedCards)
 
-        #expect(store.messages == [.insert(ownedCard)])
+        #expect(store.messages == [.insert(ownedCards)])
     }
 
     @Test func save_failsOnStoreInsertionError() async {
@@ -69,7 +69,7 @@ struct LocalOwnedCardLoaderTests {
         store.insertionResult = .failure(anyNSError())
 
         await #expect(throws: LocalOwnedCardLoader.SaveError.failed) {
-            try await sut.save(makeOwnedCard(cardID: 1))
+            try await sut.save([makeOwnedCard(cardID: 1)])
         }
     }
 
@@ -77,7 +77,7 @@ struct LocalOwnedCardLoaderTests {
         let (sut, store) = makeSUT()
         store.insertionResult = .success(())
 
-        try await sut.save(makeOwnedCard(cardID: 1))
+        try await sut.save([makeOwnedCard(cardID: 1)])
     }
 
     @Test func remove_deletesOwnedCardWithIDFromStore() async {
@@ -106,7 +106,7 @@ struct LocalOwnedCardLoaderTests {
     }
 
     // MARK: - Helpers
-    private func makeSUT() -> (sut: LocalOwnedCardLoader, store: OwnedCardStoreSpy) {
+    private func makeSUT() -> (sut: OwnedCardCollection, store: OwnedCardStoreSpy) {
         let store = OwnedCardStoreSpy()
         let sut = LocalOwnedCardLoader(store: store)
         return (sut, store)
@@ -119,7 +119,7 @@ struct LocalOwnedCardLoaderTests {
     private final class OwnedCardStoreSpy: OwnedCardStore {
         enum Message: Equatable {
             case retrieveAll
-            case insert(OwnedCard)
+            case insert([OwnedCard])
             case delete(OwnedCard.ID)
         }
 
@@ -133,8 +133,8 @@ struct LocalOwnedCardLoaderTests {
             return try retrievalResult.get()
         }
 
-        func insert(_ ownedCard: OwnedCard) async throws {
-            messages.append(.insert(ownedCard))
+        func insert(_ ownedCards: [OwnedCard]) async throws {
+            messages.append(.insert(ownedCards))
             try insertionResult.get()
         }
 

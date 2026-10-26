@@ -6,29 +6,29 @@
 //
 
 import SwiftUI
-import SwiftData
 import AppCore
 import os
 
 @main
 struct TCGCollectApp: App {
-    var sharedModelContainer: ModelContainer = {
-        let schema = Schema([
-            Item.self,
-        ])
-        let modelConfiguration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false)
-
-        do {
-            return try ModelContainer(for: schema, configurations: [modelConfiguration])
-        } catch {
-            fatalError("Could not create ModelContainer: \(error)")
-        }
-    }()
-
     // Owned here, not by ChatView, so a request and its answer survive switching tabs.
     @State private var chatViewModel = Self.makeChatViewModel()
     // One for the whole app, so every screen shares the images already in memory.
     @State private var imageLoader = Self.makeImageLoader()
+    // Only one for the whole app: Core Data can crash if several new store files are set up at the same moment.
+    @State private var ownedCardCollection: OwnedCardCollection?
+    // Owned here so what was added stays marked as added after switching tabs.
+    @State private var addToCollectionViewModel: AddToCollectionViewModel?
+    // Owned here so the cards stay on screen while the tab reloads them.
+    @State private var collectionViewModel: CollectionViewModel?
+
+    init() {
+        // Both from the same collection, so the app never opens the store twice.
+        let collection = Self.makeOwnedCardCollection()
+        _ownedCardCollection = State(initialValue: collection)
+        _addToCollectionViewModel = State(initialValue: collection.map { AddToCollectionViewModel(saver: $0) })
+        _collectionViewModel = State(initialValue: collection.map { CollectionViewModel(loader: $0) })
+    }
 
     var body: some Scene {
         WindowGroup {
@@ -36,19 +36,24 @@ struct TCGCollectApp: App {
                 Tab("Chat", systemImage: "bubble.left.and.text.bubble.right") {
                     NavigationStack {
                         if let chatViewModel {
-                            ChatView(viewModel: chatViewModel)
+                            ChatView(viewModel: chatViewModel, addToCollection: addToCollectionViewModel)
                         } else {
                             ChatUnavailableView()
                         }
                     }
                 }
                 Tab("Collection", systemImage: "rectangle.stack") {
-                    ContentView()
+                    NavigationStack {
+                        if let collectionViewModel {
+                            CollectionView(viewModel: collectionViewModel)
+                        } else {
+                            CollectionUnavailableView()
+                        }
+                    }
                 }
             }
             .environment(\.imageLoader, imageLoader)
         }
-        .modelContainer(sharedModelContainer)
     }
 
     /// nil when the backend isn't configured, e.g. in Release builds for now.
@@ -71,5 +76,17 @@ struct TCGCollectApp: App {
             cacheDirectory: cacheDirectory
         )
         return ImageLoader(dataLoader: dataLoader, memoryCache: ImageMemoryCache())
+    }
+
+    /// Kept in Application Support, not Caches, since the system may clear Caches but a collection must never disappear.
+    /// nil when the store can't be opened, so the rest of the app still works.
+    private static func makeOwnedCardCollection() -> OwnedCardCollection? {
+        let storeURL = URL.applicationSupportDirectory.appending(path: "Collection/OwnedCards.store")
+        do {
+            return try OwnedCardComposer.makeLocalOwnedCardCollection(storeURL: storeURL)
+        } catch {
+            Logger(subsystem: "TCGCollect", category: "Collection").error("Collection unavailable: \(String(describing: error))")
+            return nil
+        }
     }
 }

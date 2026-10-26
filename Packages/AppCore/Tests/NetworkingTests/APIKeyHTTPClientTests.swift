@@ -66,7 +66,7 @@ final class APIKeyHTTPClientTests {
     private func makeSUT(
         apiKey: String = "any api key",
         result: Result<NetworkClient.URLResult, Error> = .failure(anyNSError())
-    ) -> (sut: APIKeyHTTPClient, decoratee: SpyClient) {
+    ) -> (sut: NetworkClient, decoratee: SpyClient) {
         let decoratee = SpyClient(result: result)
         let sut = APIKeyHTTPClient(decoratee: decoratee, apiKey: apiKey)
         return (sut, decoratee)
