@@ -36,19 +36,13 @@ public actor SwiftDataOwnedCardStore: OwnedCardStore {
         let context = ModelContext(modelContainer)
         var nextPosition = try nextPosition(in: context)
         for ownedCard in ownedCards {
-            let position: Int
-            // Also finds one inserted earlier in this batch, since fetches include unsaved changes.
-            if let existing = try managedOwnedCard(withID: ownedCard.id, in: context) {
-                // A replaced card keeps its place, so editing it doesn't move it in the collection.
-                position = existing.position
-                context.delete(existing)
+            if let stored = try managedOwnedCard(withID: ownedCard.id, in: context) {
+                stored.update(from: ownedCard)
             } else {
-                position = nextPosition
+                context.insert(ManagedOwnedCard(ownedCard, position: nextPosition))
                 nextPosition += 1
             }
-            context.insert(ManagedOwnedCard(ownedCard, position: position))
         }
-        // One save for the whole batch, so it's stored all at once or not at all.
         try context.save()
     }
 

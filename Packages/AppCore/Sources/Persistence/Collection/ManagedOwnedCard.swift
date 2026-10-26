@@ -37,6 +37,13 @@ final class ManagedOwnedCard {
         self.position = position
         cardID = ownedCard.card.id
         name = ownedCard.card.name
+        update(from: ownedCard)
+    }
+
+    /// Takes the values of an edited card. Its id and position stay, so it keeps its place in the collection.
+    func update(from ownedCard: OwnedCard) {
+        cardID = ownedCard.card.id
+        name = ownedCard.card.name
         number = ownedCard.card.number
         setID = ownedCard.card.setID
         setName = ownedCard.card.setName
