@@ -168,14 +168,12 @@ struct CollectionViewModelTests {
         // nil once completed, so no load is resumed twice.
         private var completions = [CheckedContinuation<[OwnedCard], Error>?]()
         private var resultForNewLoads: Result<[OwnedCard], Error>?
-        // Tests waiting for a load to arrive, by the index of that load.
-        private var arrivalWaiters = [Int: CheckedContinuation<Void, Never>]()
+        private let arrivals = CallArrivals(callName: "load")
 
-        private(set) var loadCount = 0
+        var loadCount: Int { arrivals.count }
 
         func load() async throws -> [OwnedCard] {
-            loadCount += 1
-            arrivalWaiters.removeValue(forKey: loadCount - 1)?.resume()
+            arrivals.record()
             if let resultForNewLoads {
                 completions.append(nil)
                 return try resultForNewLoads.get()
@@ -183,20 +181,8 @@ struct CollectionViewModelTests {
             return try await withCheckedThrowingContinuation { completions.append($0) }
         }
 
-        /// Returns once load number `index` has arrived, or records an issue if it hasn't within `timeout`.
-        func waitForLoad(
-            at index: Int, timeout: Duration = .seconds(5),
-            sourceLocation: SourceLocation = #_sourceLocation
-        ) async {
-            guard loadCount <= index else { return }
-            let timeoutTask = Task { [weak self] in
-                try await Task.sleep(for: timeout)
-                guard let waiter = self?.arrivalWaiters.removeValue(forKey: index) else { return }
-                Issue.record("Load \(index) never reached the loader", sourceLocation: sourceLocation)
-                waiter.resume()
-            }
-            await withCheckedContinuation { arrivalWaiters[index] = $0 }
-            timeoutTask.cancel()
+        func waitForLoad(at index: Int, sourceLocation: SourceLocation = #_sourceLocation) async {
+            await arrivals.waitForCall(at: index, sourceLocation: sourceLocation)
         }
 
         /// Loads that arrive from now on complete right away, so a load that should be ignored

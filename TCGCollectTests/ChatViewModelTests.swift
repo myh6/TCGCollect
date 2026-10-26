@@ -192,8 +192,7 @@ struct ChatViewModelTests {
         // nil once completed, so no request is resumed twice.
         private var completions = [CheckedContinuation<ChatAnswer, Error>?]()
         private var resultForNewRequests: Result<ChatAnswer, Error>?
-        // Tests waiting for a request to arrive, by the index of that request.
-        private var arrivalWaiters = [Int: CheckedContinuation<Void, Never>]()
+        private let arrivals = CallArrivals(callName: "request")
         // Cancellation handlers can run on any thread, so they write through a lock.
         private let cancelled = OSAllocatedUnfairLock(initialState: [Int]())
 
@@ -202,7 +201,7 @@ struct ChatViewModelTests {
 
         func load(question: String) async throws -> ChatAnswer {
             questions.append(question)
-            arrivalWaiters.removeValue(forKey: questions.count - 1)?.resume()
+            arrivals.record()
             if let resultForNewRequests {
                 completions.append(nil)
                 return try resultForNewRequests.get()
@@ -226,20 +225,8 @@ struct ChatViewModelTests {
             completion.resume(with: result)
         }
 
-        /// Returns once request number `index` has arrived, or records an issue if it hasn't within `timeout`.
-        func waitForRequest(
-            at index: Int, timeout: Duration = .seconds(5),
-            sourceLocation: SourceLocation = #_sourceLocation
-        ) async {
-            guard questions.count <= index else { return }
-            let timeoutTask = Task { [weak self] in
-                try await Task.sleep(for: timeout)
-                guard let waiter = self?.arrivalWaiters.removeValue(forKey: index) else { return }
-                Issue.record("Request \(index) never reached the loader", sourceLocation: sourceLocation)
-                waiter.resume()
-            }
-            await withCheckedContinuation { arrivalWaiters[index] = $0 }
-            timeoutTask.cancel()
+        func waitForRequest(at index: Int, sourceLocation: SourceLocation = #_sourceLocation) async {
+            await arrivals.waitForCall(at: index, sourceLocation: sourceLocation)
         }
 
         /// Requests that arrive from now on complete right away, so a send that should be ignored

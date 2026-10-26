@@ -240,12 +240,11 @@ struct AddToCollectionViewModelTests {
         // nil once completed, so no save is resumed twice.
         private var completions = [CheckedContinuation<Void, Error>?]()
         private var resultForNewSaves: Result<Void, Error>?
-        // Tests waiting for a save to arrive, by the index of that save.
-        private var arrivalWaiters = [Int: CheckedContinuation<Void, Never>]()
+        private let arrivals = CallArrivals(callName: "save")
 
         func save(_ ownedCards: [OwnedCard]) async throws {
             saves.append(ownedCards)
-            arrivalWaiters.removeValue(forKey: saves.count - 1)?.resume()
+            arrivals.record()
             if let resultForNewSaves {
                 completions.append(nil)
                 return try resultForNewSaves.get()
@@ -253,20 +252,8 @@ struct AddToCollectionViewModelTests {
             try await withCheckedThrowingContinuation { completions.append($0) }
         }
 
-        /// Returns once save number `index` has arrived, or records an issue if it hasn't within `timeout`.
-        func waitForSave(
-            at index: Int, timeout: Duration = .seconds(5),
-            sourceLocation: SourceLocation = #_sourceLocation
-        ) async {
-            guard saves.count <= index else { return }
-            let timeoutTask = Task { [weak self] in
-                try await Task.sleep(for: timeout)
-                guard let waiter = self?.arrivalWaiters.removeValue(forKey: index) else { return }
-                Issue.record("Save \(index) never reached the saver", sourceLocation: sourceLocation)
-                waiter.resume()
-            }
-            await withCheckedContinuation { arrivalWaiters[index] = $0 }
-            timeoutTask.cancel()
+        func waitForSave(at index: Int, sourceLocation: SourceLocation = #_sourceLocation) async {
+            await arrivals.waitForCall(at: index, sourceLocation: sourceLocation)
         }
 
         /// Saves that arrive from now on complete right away, so an add that should be ignored
