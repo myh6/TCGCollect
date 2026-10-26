@@ -165,7 +165,7 @@ struct AddToCollectionViewModelTests {
         let card = makeCard(id: 1)
         let (sut, saver) = makeSUT()
         let firstAdding = await startAdding(card, to: sut, saver: saver)
-        saver.completeNewSavesImmediately(with: .success(()))
+        saver.setCompletionForNewSaves(to: .success(()))
 
         await sut.add(card)
         #expect(saver.saves.count == 1)
@@ -178,7 +178,7 @@ struct AddToCollectionViewModelTests {
         let card = makeCard(id: 1)
         let (sut, saver) = makeSUT()
         await add(card, to: sut, saver: saver, completingWith: .success(()))
-        saver.completeNewSavesImmediately(with: .success(()))
+        saver.setCompletionForNewSaves(to: .success(()))
 
         await sut.add(card)
 
@@ -271,7 +271,8 @@ struct AddToCollectionViewModelTests {
 
         /// Saves that arrive from now on complete right away, so an add that should be ignored
         /// but reaches the saver anyway shows up in `saves` instead of leaving the test waiting.
-        func completeNewSavesImmediately(with result: Result<Void, Error>) {
+        /// Saves already waiting stay held until `complete(with:at:)`.
+        func setCompletionForNewSaves(to result: Result<Void, Error>) {
             resultForNewSaves = result
         }
 

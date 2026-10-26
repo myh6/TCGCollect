@@ -106,7 +106,7 @@ struct CollectionViewModelTests {
     @Test func load_ignoresLoadWhileLoading() async {
         let (sut, loader) = makeSUT()
         let firstLoading = await startLoading(sut, loader: loader)
-        loader.completeNewLoadsImmediately(with: .success([]))
+        loader.setCompletionForNewLoads(to: .success([]))
 
         await sut.load()
         #expect(loader.loadCount == 1)
@@ -119,7 +119,7 @@ struct CollectionViewModelTests {
         let (sut, loader) = makeSUT()
         await load(sut, loader: loader, completingWith: .success([makeOwnedCard(cardID: 1)]))
         let reloading = await startLoading(sut, loader: loader, at: 1)
-        loader.completeNewLoadsImmediately(with: .success([]))
+        loader.setCompletionForNewLoads(to: .success([]))
 
         await sut.load()
         #expect(loader.loadCount == 2)
@@ -201,7 +201,8 @@ struct CollectionViewModelTests {
 
         /// Loads that arrive from now on complete right away, so a load that should be ignored
         /// but reaches the loader anyway shows up in `loadCount` instead of leaving the test waiting.
-        func completeNewLoadsImmediately(with result: Result<[OwnedCard], Error>) {
+        /// Loads already waiting stay held until `complete(with:at:)`.
+        func setCompletionForNewLoads(to result: Result<[OwnedCard], Error>) {
             resultForNewLoads = result
         }
 

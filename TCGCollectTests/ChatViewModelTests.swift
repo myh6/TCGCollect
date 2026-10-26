@@ -41,7 +41,7 @@ struct ChatViewModelTests {
     @Test(arguments: ["", "   ", "\n"])
     func send_ignoresEmptyQuestion(question: String) async {
         let (sut, loader) = makeSUT()
-        loader.completeNewRequestsImmediately(with: .success(makeAnswer("an answer")))
+        loader.setCompletionForNewRequests(to: .success(makeAnswer("an answer")))
 
         await sut.send(question)
 
@@ -90,7 +90,7 @@ struct ChatViewModelTests {
     @Test func send_ignoresSendWhileLoading() async {
         let (sut, loader) = makeSUT()
         let firstSending = await startSending(to: sut, loader: loader)
-        loader.completeNewRequestsImmediately(with: .success(makeAnswer("an answer")))
+        loader.setCompletionForNewRequests(to: .success(makeAnswer("an answer")))
 
         await sut.send("another question")
         #expect(loader.questions == ["a question"])
@@ -244,7 +244,8 @@ struct ChatViewModelTests {
 
         /// Requests that arrive from now on complete right away, so a send that should be ignored
         /// but reaches the loader anyway shows up in `questions` instead of leaving the test waiting.
-        func completeNewRequestsImmediately(with result: Result<ChatAnswer, Error>) {
+        /// Requests already waiting stay held until `complete(with:at:)`.
+        func setCompletionForNewRequests(to result: Result<ChatAnswer, Error>) {
             resultForNewRequests = result
         }
     }
