@@ -243,6 +243,7 @@ struct AddToCollectionViewModelTests {
     }
 
     /// Holds every `save` call until the test completes it, so tests can look at the in-between state.
+    @MainActor
     private final class SaverSpy: OwnedCardSaver {
         private(set) var saves = [[OwnedCard]]()
         // nil once completed, so no save is resumed twice.

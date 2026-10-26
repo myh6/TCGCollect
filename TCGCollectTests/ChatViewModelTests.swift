@@ -195,6 +195,7 @@ struct ChatViewModelTests {
     }
 
     /// Holds every `load` call until the test completes it, so tests can look at the in-between state.
+    @MainActor
     private final class LoaderSpy: ChatLoader {
         private(set) var questions = [String]()
         // nil once completed, so no request is resumed twice.

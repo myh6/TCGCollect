@@ -172,6 +172,7 @@ struct CollectionViewModelTests {
     }
 
     /// Holds every `load` call until the test completes it, so tests can look at the in-between state.
+    @MainActor
     private final class LoaderSpy: OwnedCardLoader {
         // nil once completed, so no load is resumed twice.
         private var completions = [CheckedContinuation<[OwnedCard], Error>?]()
