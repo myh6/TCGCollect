@@ -165,29 +165,25 @@ struct AddToCollectionViewModelTests {
         let card = makeCard(id: 1)
         let (sut, saver) = makeSUT()
         let firstAdding = await startAdding(card, to: sut, saver: saver)
+        saver.completeNewSavesImmediately(with: .success(()))
 
-        // In its own task: if it wrongly reached the saver, awaiting it here would never return.
-        let secondAdding = Task { await sut.add(card) }
-        await giveTimeToReachSaver(saver, saveCount: 2)
+        await sut.add(card)
         #expect(saver.saves.count == 1)
 
-        saver.completeAllPending(with: .success(()))
+        saver.complete(with: .success(()))
         await firstAdding.value
-        await secondAdding.value
     }
 
     @Test func add_ignoresCardAlreadyAdded() async {
         let card = makeCard(id: 1)
         let (sut, saver) = makeSUT()
         await add(card, to: sut, saver: saver, completingWith: .success(()))
+        saver.completeNewSavesImmediately(with: .success(()))
 
-        let secondAdding = Task { await sut.add(card) }
-        await giveTimeToReachSaver(saver, saveCount: 2)
+        await sut.add(card)
+
         #expect(saver.saves.count == 1)
         #expect(sut.status(for: 1) == .added)
-
-        saver.completeAllPending(with: .success(()))
-        await secondAdding.value
     }
 
     @Test func add_retriesCardThatFailedToBeAdded() async {
@@ -219,25 +215,20 @@ struct AddToCollectionViewModelTests {
     }
 
     /// Starts adding `card` and returns once the saver has received save number `index`, which is still waiting.
-    private func startAdding(_ card: Card, to sut: AddToCollectionViewModel, saver: SaverSpy, at index: Int = 0) async -> Task<Void, Never> {
+    private func startAdding(
+        _ card: Card, to sut: AddToCollectionViewModel, saver: SaverSpy, at index: Int = 0,
+        sourceLocation: SourceLocation = #_sourceLocation
+    ) async -> Task<Void, Never> {
         let adding = Task { await sut.add(card) }
-        for _ in 0..<1_000 where saver.saves.count <= index {
-            await Task.yield()
-        }
-        #expect(saver.saves.count == index + 1, "Expected the saver to receive save \(index)")
+        await saver.waitForSave(at: index, sourceLocation: sourceLocation)
         return adding
     }
 
-    /// For an add that should be ignored: waits a bounded time for the saver to get `saveCount` saves anyway,
-    /// so an add that wrongly goes through has the chance to show up before the test checks.
-    private func giveTimeToReachSaver(_ saver: SaverSpy, saveCount: Int) async {
-        for _ in 0..<1_000 where saver.saves.count < saveCount {
-            await Task.yield()
-        }
-    }
-
-    private func add(_ card: Card, to sut: AddToCollectionViewModel, saver: SaverSpy, completingWith result: Result<Void, Error>) async {
-        let adding = await startAdding(card, to: sut, saver: saver)
+    private func add(
+        _ card: Card, to sut: AddToCollectionViewModel, saver: SaverSpy, completingWith result: Result<Void, Error>,
+        sourceLocation: SourceLocation = #_sourceLocation
+    ) async {
+        let adding = await startAdding(card, to: sut, saver: saver, sourceLocation: sourceLocation)
         saver.complete(with: result)
         await adding.value
     }
@@ -248,16 +239,40 @@ struct AddToCollectionViewModelTests {
         private(set) var saves = [[OwnedCard]]()
         // nil once completed, so no save is resumed twice.
         private var completions = [CheckedContinuation<Void, Error>?]()
-        // Set by completeAllPending, so a save that arrives late doesn't wait forever.
-        private var resultForLaterSaves: Result<Void, Error>?
+        private var resultForNewSaves: Result<Void, Error>?
+        // Tests waiting for a save to arrive, by the index of that save.
+        private var arrivalWaiters = [Int: CheckedContinuation<Void, Never>]()
 
         func save(_ ownedCards: [OwnedCard]) async throws {
             saves.append(ownedCards)
-            if let resultForLaterSaves {
+            arrivalWaiters.removeValue(forKey: saves.count - 1)?.resume()
+            if let resultForNewSaves {
                 completions.append(nil)
-                return try resultForLaterSaves.get()
+                return try resultForNewSaves.get()
             }
             try await withCheckedThrowingContinuation { completions.append($0) }
+        }
+
+        /// Returns once save number `index` has arrived, or records an issue if it hasn't within `timeout`.
+        func waitForSave(
+            at index: Int, timeout: Duration = .seconds(5),
+            sourceLocation: SourceLocation = #_sourceLocation
+        ) async {
+            guard saves.count <= index else { return }
+            let timeoutTask = Task { [weak self] in
+                try await Task.sleep(for: timeout)
+                guard let waiter = self?.arrivalWaiters.removeValue(forKey: index) else { return }
+                Issue.record("Save \(index) never reached the saver", sourceLocation: sourceLocation)
+                waiter.resume()
+            }
+            await withCheckedContinuation { arrivalWaiters[index] = $0 }
+            timeoutTask.cancel()
+        }
+
+        /// Saves that arrive from now on complete right away, so an add that should be ignored
+        /// but reaches the saver anyway shows up in `saves` instead of leaving the test waiting.
+        func completeNewSavesImmediately(with result: Result<Void, Error>) {
+            resultForNewSaves = result
         }
 
         func complete(with result: Result<Void, Error>, at index: Int = 0) {
@@ -267,14 +282,6 @@ struct AddToCollectionViewModelTests {
             }
             completions[index] = nil
             completion.resume(with: result)
-        }
-
-        /// Completes every waiting save, and any that arrive later, with `result`.
-        func completeAllPending(with result: Result<Void, Error>) {
-            resultForLaterSaves = result
-            for index in completions.indices where completions[index] != nil {
-                complete(with: result, at: index)
-            }
         }
     }
 }
