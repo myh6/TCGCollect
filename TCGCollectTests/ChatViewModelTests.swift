@@ -41,14 +41,12 @@ struct ChatViewModelTests {
     @Test(arguments: ["", "   ", "\n"])
     func send_ignoresEmptyQuestion(question: String) async {
         let (sut, loader) = makeSUT()
-        // In its own task: if it wrongly reached the loader, awaiting it here would never return.
-        let sending = Task { await sut.send(question) }
-        await giveTimeToReachLoader(loader, requestCount: 1)
+        loader.completeNewRequestsImmediately(with: .success(makeAnswer("an answer")))
+
+        await sut.send(question)
+
         #expect(loader.questions.isEmpty)
         #expect(sut.state == .idle)
-
-        loader.completeAllPending(with: .success(makeAnswer("an answer")))
-        await sending.value
     }
 
     @Test func send_isLoadingWhileWaitingForAnswer() async {
@@ -92,15 +90,13 @@ struct ChatViewModelTests {
     @Test func send_ignoresSendWhileLoading() async {
         let (sut, loader) = makeSUT()
         let firstSending = await startSending(to: sut, loader: loader)
+        loader.completeNewRequestsImmediately(with: .success(makeAnswer("an answer")))
 
-        // In its own task: if it wrongly reached the loader, awaiting it here would never return.
-        let secondSending = Task { await sut.send("another question") }
-        await giveTimeToReachLoader(loader, requestCount: 2)
+        await sut.send("another question")
         #expect(loader.questions == ["a question"])
 
-        loader.completeAllPending(with: .success(makeAnswer("an answer")))
+        loader.complete(with: .success(makeAnswer("an answer")))
         await firstSending.value
-        await secondSending.value
     }
 
     @Test func cancel_withoutPendingRequestDoesNothing() {
@@ -167,25 +163,20 @@ struct ChatViewModelTests {
     }
 
     /// Starts sending `question` and returns once the loader has received request number `index`, which is still waiting.
-    private func startSending(_ question: String = "a question", to sut: ChatViewModel, loader: LoaderSpy, at index: Int = 0) async -> Task<Void, Never> {
+    private func startSending(
+        _ question: String = "a question", to sut: ChatViewModel, loader: LoaderSpy, at index: Int = 0,
+        sourceLocation: SourceLocation = #_sourceLocation
+    ) async -> Task<Void, Never> {
         let sending = Task { await sut.send(question) }
-        for _ in 0..<1_000 where loader.questions.count <= index {
-            await Task.yield()
-        }
-        #expect(loader.questions.count == index + 1, "Expected the loader to receive request \(index)")
+        await loader.waitForRequest(at: index, sourceLocation: sourceLocation)
         return sending
     }
 
-    /// For a send that should be ignored: waits a bounded time for the loader to get `requestCount` requests anyway,
-    /// so a send that wrongly goes through has the chance to show up before the test checks.
-    private func giveTimeToReachLoader(_ loader: LoaderSpy, requestCount: Int) async {
-        for _ in 0..<1_000 where loader.questions.count < requestCount {
-            await Task.yield()
-        }
-    }
-
-    private func send(_ question: String = "a question", to sut: ChatViewModel, loader: LoaderSpy, completingWith result: Result<ChatAnswer, Error>) async {
-        let sending = await startSending(question, to: sut, loader: loader)
+    private func send(
+        _ question: String = "a question", to sut: ChatViewModel, loader: LoaderSpy, completingWith result: Result<ChatAnswer, Error>,
+        sourceLocation: SourceLocation = #_sourceLocation
+    ) async {
+        let sending = await startSending(question, to: sut, loader: loader, sourceLocation: sourceLocation)
         loader.complete(with: result)
         await sending.value
     }
@@ -200,8 +191,9 @@ struct ChatViewModelTests {
         private(set) var questions = [String]()
         // nil once completed, so no request is resumed twice.
         private var completions = [CheckedContinuation<ChatAnswer, Error>?]()
-        // Set by completeAllPending, so a request that arrives late doesn't wait forever.
-        private var resultForLaterRequests: Result<ChatAnswer, Error>?
+        private var resultForNewRequests: Result<ChatAnswer, Error>?
+        // Tests waiting for a request to arrive, by the index of that request.
+        private var arrivalWaiters = [Int: CheckedContinuation<Void, Never>]()
         // Cancellation handlers can run on any thread, so they write through a lock.
         private let cancelled = OSAllocatedUnfairLock(initialState: [Int]())
 
@@ -210,9 +202,10 @@ struct ChatViewModelTests {
 
         func load(question: String) async throws -> ChatAnswer {
             questions.append(question)
-            if let resultForLaterRequests {
+            arrivalWaiters.removeValue(forKey: questions.count - 1)?.resume()
+            if let resultForNewRequests {
                 completions.append(nil)
-                return try resultForLaterRequests.get()
+                return try resultForNewRequests.get()
             }
             let index = questions.count - 1
             let cancelled = cancelled
@@ -233,12 +226,26 @@ struct ChatViewModelTests {
             completion.resume(with: result)
         }
 
-        /// Completes every waiting request, and any that arrive later, with `result`.
-        func completeAllPending(with result: Result<ChatAnswer, Error>) {
-            resultForLaterRequests = result
-            for index in completions.indices where completions[index] != nil {
-                complete(with: result, at: index)
+        /// Returns once request number `index` has arrived, or records an issue if it hasn't within `timeout`.
+        func waitForRequest(
+            at index: Int, timeout: Duration = .seconds(5),
+            sourceLocation: SourceLocation = #_sourceLocation
+        ) async {
+            guard questions.count <= index else { return }
+            let timeoutTask = Task { [weak self] in
+                try await Task.sleep(for: timeout)
+                guard let waiter = self?.arrivalWaiters.removeValue(forKey: index) else { return }
+                Issue.record("Request \(index) never reached the loader", sourceLocation: sourceLocation)
+                waiter.resume()
             }
+            await withCheckedContinuation { arrivalWaiters[index] = $0 }
+            timeoutTask.cancel()
+        }
+
+        /// Requests that arrive from now on complete right away, so a send that should be ignored
+        /// but reaches the loader anyway shows up in `questions` instead of leaving the test waiting.
+        func completeNewRequestsImmediately(with result: Result<ChatAnswer, Error>) {
+            resultForNewRequests = result
         }
     }
 }

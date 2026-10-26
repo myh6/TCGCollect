@@ -106,30 +106,26 @@ struct CollectionViewModelTests {
     @Test func load_ignoresLoadWhileLoading() async {
         let (sut, loader) = makeSUT()
         let firstLoading = await startLoading(sut, loader: loader)
+        loader.completeNewLoadsImmediately(with: .success([]))
 
-        // In its own task: if it wrongly reached the loader, awaiting it here would never return.
-        let secondLoading = Task { await sut.load() }
-        await giveTimeToReachLoader(loader, loadCount: 2)
+        await sut.load()
         #expect(loader.loadCount == 1)
 
-        loader.completeAllPending(with: .success([]))
+        loader.complete(with: .success([]))
         await firstLoading.value
-        await secondLoading.value
     }
 
     @Test func load_ignoresLoadWhileReloading() async {
         let (sut, loader) = makeSUT()
         await load(sut, loader: loader, completingWith: .success([makeOwnedCard(cardID: 1)]))
         let reloading = await startLoading(sut, loader: loader, at: 1)
+        loader.completeNewLoadsImmediately(with: .success([]))
 
-        // In its own task: if it wrongly reached the loader, awaiting it here would never return.
-        let secondReloading = Task { await sut.load() }
-        await giveTimeToReachLoader(loader, loadCount: 3)
+        await sut.load()
         #expect(loader.loadCount == 2)
 
-        loader.completeAllPending(with: .success([]))
+        loader.complete(with: .success([]), at: 1)
         await reloading.value
-        await secondReloading.value
     }
 
     // MARK: - Helpers
@@ -148,25 +144,20 @@ struct CollectionViewModelTests {
     }
 
     /// Starts loading and returns once the loader has received load number `index`, which is still waiting.
-    private func startLoading(_ sut: CollectionViewModel, loader: LoaderSpy, at index: Int = 0) async -> Task<Void, Never> {
+    private func startLoading(
+        _ sut: CollectionViewModel, loader: LoaderSpy, at index: Int = 0,
+        sourceLocation: SourceLocation = #_sourceLocation
+    ) async -> Task<Void, Never> {
         let loading = Task { await sut.load() }
-        for _ in 0..<1_000 where loader.loadCount <= index {
-            await Task.yield()
-        }
-        #expect(loader.loadCount == index + 1, "Expected the loader to receive load \(index)")
+        await loader.waitForLoad(at: index, sourceLocation: sourceLocation)
         return loading
     }
 
-    /// For a load that should be ignored: waits a bounded time for the loader to get `loadCount` loads anyway,
-    /// so a load that wrongly goes through has the chance to show up before the test checks.
-    private func giveTimeToReachLoader(_ loader: LoaderSpy, loadCount: Int) async {
-        for _ in 0..<1_000 where loader.loadCount < loadCount {
-            await Task.yield()
-        }
-    }
-
-    private func load(_ sut: CollectionViewModel, loader: LoaderSpy, completingWith result: Result<[OwnedCard], Error>) async {
-        let loading = await startLoading(sut, loader: loader)
+    private func load(
+        _ sut: CollectionViewModel, loader: LoaderSpy, completingWith result: Result<[OwnedCard], Error>,
+        sourceLocation: SourceLocation = #_sourceLocation
+    ) async {
+        let loading = await startLoading(sut, loader: loader, sourceLocation: sourceLocation)
         loader.complete(with: result)
         await loading.value
     }
@@ -176,17 +167,42 @@ struct CollectionViewModelTests {
     private final class LoaderSpy: OwnedCardLoader {
         // nil once completed, so no load is resumed twice.
         private var completions = [CheckedContinuation<[OwnedCard], Error>?]()
-        // Set by completeAllPending, so a load that arrives late doesn't wait forever.
-        private var resultForLaterLoads: Result<[OwnedCard], Error>?
+        private var resultForNewLoads: Result<[OwnedCard], Error>?
+        // Tests waiting for a load to arrive, by the index of that load.
+        private var arrivalWaiters = [Int: CheckedContinuation<Void, Never>]()
 
-        var loadCount: Int { completions.count }
+        private(set) var loadCount = 0
 
         func load() async throws -> [OwnedCard] {
-            if let resultForLaterLoads {
+            loadCount += 1
+            arrivalWaiters.removeValue(forKey: loadCount - 1)?.resume()
+            if let resultForNewLoads {
                 completions.append(nil)
-                return try resultForLaterLoads.get()
+                return try resultForNewLoads.get()
             }
             return try await withCheckedThrowingContinuation { completions.append($0) }
+        }
+
+        /// Returns once load number `index` has arrived, or records an issue if it hasn't within `timeout`.
+        func waitForLoad(
+            at index: Int, timeout: Duration = .seconds(5),
+            sourceLocation: SourceLocation = #_sourceLocation
+        ) async {
+            guard loadCount <= index else { return }
+            let timeoutTask = Task { [weak self] in
+                try await Task.sleep(for: timeout)
+                guard let waiter = self?.arrivalWaiters.removeValue(forKey: index) else { return }
+                Issue.record("Load \(index) never reached the loader", sourceLocation: sourceLocation)
+                waiter.resume()
+            }
+            await withCheckedContinuation { arrivalWaiters[index] = $0 }
+            timeoutTask.cancel()
+        }
+
+        /// Loads that arrive from now on complete right away, so a load that should be ignored
+        /// but reaches the loader anyway shows up in `loadCount` instead of leaving the test waiting.
+        func completeNewLoadsImmediately(with result: Result<[OwnedCard], Error>) {
+            resultForNewLoads = result
         }
 
         func complete(with result: Result<[OwnedCard], Error>, at index: Int = 0) {
@@ -196,14 +212,6 @@ struct CollectionViewModelTests {
             }
             completions[index] = nil
             completion.resume(with: result)
-        }
-
-        /// Completes every waiting load, and any that arrive later, with `result`.
-        func completeAllPending(with result: Result<[OwnedCard], Error>) {
-            resultForLaterLoads = result
-            for index in completions.indices where completions[index] != nil {
-                complete(with: result, at: index)
-            }
         }
     }
 }
