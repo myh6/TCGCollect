@@ -9,7 +9,8 @@ import Foundation
 import Observation
 import AppCore
 
-/// Searches the cards the user owns. The view waits for a pause in typing before calling `search(_:)`.
+/// Searches the cards the user owns and the cards online, in two sections that update on their own.
+/// The view waits for a pause in typing before calling `search(_:)`.
 @MainActor
 @Observable
 final class CardSearchViewModel {
@@ -25,25 +26,43 @@ final class CardSearchViewModel {
     static let minimumQueryLength = 2
 
     private(set) var ownedCards = SectionState<OwnedCardGroup>.idle
+    private(set) var onlineCards = SectionState<CardSearchResult>.idle
 
     private let ownedCardSearcher: OwnedCardSearcher
+    private let cardSearcher: CardSearcher
 
-    init(ownedCardSearcher: OwnedCardSearcher) {
+    init(ownedCardSearcher: OwnedCardSearcher, cardSearcher: CardSearcher) {
         self.ownedCardSearcher = ownedCardSearcher
+        self.cardSearcher = cardSearcher
     }
 
     func search(_ query: String) async {
         let query = query.trimmingCharacters(in: .whitespacesAndNewlines)
         guard query.count >= Self.minimumQueryLength else {
             ownedCards = .idle
+            onlineCards = .idle
             return
         }
 
-        ownedCards = .searching(previous: ownedCards.items)
+        // Together, so the quick local search shows its cards without waiting for the network.
+        async let owned: Void = update(\.ownedCards) {
+            OwnedCardGroup.groups(from: try await self.ownedCardSearcher.search(query))
+        }
+        async let online: Void = update(\.onlineCards) {
+            try await self.cardSearcher.search(query)
+        }
+        _ = await (owned, online)
+    }
+
+    private func update<Item>(
+        _ section: ReferenceWritableKeyPath<CardSearchViewModel, SectionState<Item>>,
+        with search: @MainActor () async throws -> [Item]
+    ) async {
+        self[keyPath: section] = .searching(previous: self[keyPath: section].items)
         do {
-            ownedCards = .loaded(OwnedCardGroup.groups(from: try await ownedCardSearcher.search(query)))
+            self[keyPath: section] = .loaded(try await search())
         } catch {
-            ownedCards = .failed
+            self[keyPath: section] = .failed
         }
     }
 }
