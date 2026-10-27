@@ -66,23 +66,9 @@ final class APIKeyHTTPClientTests {
     private func makeSUT(
         apiKey: String = "any api key",
         result: Result<NetworkClient.URLResult, Error> = .failure(anyNSError())
-    ) -> (sut: NetworkClient, decoratee: SpyClient) {
-        let decoratee = SpyClient(result: result)
+    ) -> (sut: NetworkClient, decoratee: NetworkClientSpy) {
+        let decoratee = NetworkClientSpy(result: result)
         let sut = APIKeyHTTPClient(decoratee: decoratee, apiKey: apiKey)
         return (sut, decoratee)
-    }
-
-    final class SpyClient: NetworkClient {
-        private(set) var requests = [URLRequest]()
-        private let result: Result<URLResult, Error>
-
-        init(result: Result<URLResult, Error>) {
-            self.result = result
-        }
-
-        func perform(_ request: URLRequest) async throws -> URLResult {
-            requests.append(request)
-            return try result.get()
-        }
     }
 }
