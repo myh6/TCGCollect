@@ -51,6 +51,26 @@ extension SwiftDataStoreFileTests {
             #expect(try await makeSUT().load() == [kept])
         }
 
+        @Test func makeOwnedCardSearcher_findsOwnedCardsSavedInCollection() async throws {
+            let luffy = makeOwnedCard(cardID: 1, name: "Monkey D. Luffy")
+            let collection = try makeSUT()
+            try await collection.save([luffy, makeOwnedCard(cardID: 2, name: "Roronoa Zoro")])
+            let searcher = OwnedCardComposer.makeOwnedCardSearcher(searching: collection)
+
+            #expect(try await searcher.search("luffy") == [luffy])
+        }
+
+        // The searcher reads the collection on every search, so it never misses a card added after it was made.
+        @Test func makeOwnedCardSearcher_findsOwnedCardSavedAfterItWasMade() async throws {
+            let collection = try makeSUT()
+            let searcher = OwnedCardComposer.makeOwnedCardSearcher(searching: collection)
+            let zoro = makeOwnedCard(cardID: 1, name: "Roronoa Zoro")
+
+            try await collection.save([zoro])
+
+            #expect(try await searcher.search("zoro") == [zoro])
+        }
+
         // MARK: - Helpers
         private var storeURL: URL {
             directory.appending(path: "OwnedCards.store")
@@ -60,8 +80,8 @@ extension SwiftDataStoreFileTests {
             try OwnedCardComposer.makeLocalOwnedCardCollection(storeURL: storeURL)
         }
 
-        private func makeOwnedCard(cardID: Int) -> OwnedCard {
-            OwnedCard(card: Card(id: cardID, name: "card \(cardID)"))
+        private func makeOwnedCard(cardID: Int, name: String? = nil) -> OwnedCard {
+            OwnedCard(card: Card(id: cardID, name: name ?? "card \(cardID)"))
         }
     }
 }
