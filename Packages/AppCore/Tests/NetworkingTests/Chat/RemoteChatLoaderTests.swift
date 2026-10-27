@@ -91,23 +91,9 @@ struct RemoteChatLoaderTests {
     private func makeSUT(
         baseURL: URL = anyURL(),
         result: Result<NetworkClient.URLResult, Error> = .failure(anyNSError())
-    ) -> (sut: ChatLoader, client: SpyClient) {
-        let client = SpyClient(result: result)
+    ) -> (sut: ChatLoader, client: NetworkClientSpy) {
+        let client = NetworkClientSpy(result: result)
         let sut = RemoteChatLoader(baseURL: baseURL, client: client)
         return (sut, client)
-    }
-
-    final class SpyClient: NetworkClient {
-        private(set) var requests = [URLRequest]()
-        private let result: Result<URLResult, Error>
-
-        init(result: Result<URLResult, Error>) {
-            self.result = result
-        }
-
-        func perform(_ request: URLRequest) async throws -> URLResult {
-            requests.append(request)
-            return try result.get()
-        }
     }
 }

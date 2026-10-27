@@ -63,23 +63,9 @@ struct RemoteImageDataLoaderTests {
     // MARK: - Helpers
     private func makeSUT(
         result: Result<NetworkClient.URLResult, Error> = .failure(anyNSError())
-    ) -> (sut: ImageDataLoader, client: SpyClient) {
-        let client = SpyClient(result: result)
+    ) -> (sut: ImageDataLoader, client: NetworkClientSpy) {
+        let client = NetworkClientSpy(result: result)
         let sut = RemoteImageDataLoader(client: client)
         return (sut, client)
-    }
-
-    final class SpyClient: NetworkClient {
-        private(set) var requests = [URLRequest]()
-        private let result: Result<URLResult, Error>
-
-        init(result: Result<URLResult, Error>) {
-            self.result = result
-        }
-
-        func perform(_ request: URLRequest) async throws -> URLResult {
-            requests.append(request)
-            return try result.get()
-        }
     }
 }

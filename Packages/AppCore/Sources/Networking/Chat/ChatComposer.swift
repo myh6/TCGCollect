@@ -7,12 +7,11 @@
 
 import Foundation
 
-/// Builds a chat loader for our backend: every request carries the API key.
+/// Builds a chat loader for our backend.
 public enum ChatComposer {
     public static func makeRemoteChatLoader(baseURL: URL, apiKey: String, session: URLSession? = nil) -> ChatLoader {
-        let client = URLSessionHTTPClient(session: session ?? makeSession())
-        let authenticatedClient = APIKeyHTTPClient(decoratee: client, apiKey: apiKey)
-        return RemoteChatLoader(baseURL: baseURL, client: authenticatedClient)
+        let client = BackendClient.make(apiKey: apiKey, session: session ?? makeSession())
+        return RemoteChatLoader(baseURL: baseURL, client: client)
     }
 
     private static func makeSession() -> URLSession {
