@@ -9,39 +9,8 @@ import Foundation
 import Testing
 @testable import Networking
 
+// URL, method and content type are checked for every endpoint in BackendEndpointTests.
 struct CardSearchEndpointTests {
-
-    @Test
-    func search_endpointURL() throws {
-        let baseURL = URL(string: "http://base-url.com")!
-
-        let received = try CardSearchEndpoint.search(query: "any query").urlRequest(baseURL: baseURL)
-
-        #expect(received.url?.absoluteString == "http://base-url.com/v1/search")
-    }
-
-    @Test
-    func search_preservesBaseURLPath() throws {
-        let baseURL = URL(string: "http://base-url.com/staging")!
-
-        let received = try CardSearchEndpoint.search(query: "any query").urlRequest(baseURL: baseURL)
-
-        #expect(received.url?.absoluteString == "http://base-url.com/staging/v1/search")
-    }
-
-    @Test
-    func search_usesPOSTMethod() throws {
-        let received = try CardSearchEndpoint.search(query: "any query").urlRequest(baseURL: anyBaseURL())
-
-        #expect(received.httpMethod == "POST")
-    }
-
-    @Test
-    func search_sendsJSONContentType() throws {
-        let received = try CardSearchEndpoint.search(query: "any query").urlRequest(baseURL: anyBaseURL())
-
-        #expect(received.value(forHTTPHeaderField: "Content-Type") == "application/json")
-    }
 
     @Test
     func search_sendsQueryAndLimitAsJSON() throws {

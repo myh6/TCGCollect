@@ -9,39 +9,8 @@ import Foundation
 import Testing
 @testable import Networking
 
+// URL, method and content type are checked for every endpoint in BackendEndpointTests.
 struct ChatEndpointTests {
-
-    @Test
-    func sendMessage_endpointURL() throws {
-        let baseURL = URL(string: "http://base-url.com")!
-
-        let received = try ChatEndpoint.sendMessage("any message").urlRequest(baseURL: baseURL)
-
-        #expect(received.url?.absoluteString == "http://base-url.com/v1/ask")
-    }
-
-    @Test
-    func sendMessage_preservesBaseURLPath() throws {
-        let baseURL = URL(string: "http://base-url.com/staging")!
-
-        let received = try ChatEndpoint.sendMessage("any message").urlRequest(baseURL: baseURL)
-
-        #expect(received.url?.absoluteString == "http://base-url.com/staging/v1/ask")
-    }
-
-    @Test
-    func sendMessage_usesPOSTMethod() throws {
-        let received = try ChatEndpoint.sendMessage("any message").urlRequest(baseURL: anyBaseURL())
-
-        #expect(received.httpMethod == "POST")
-    }
-
-    @Test
-    func sendMessage_sendsJSONContentType() throws {
-        let received = try ChatEndpoint.sendMessage("any message").urlRequest(baseURL: anyBaseURL())
-
-        #expect(received.value(forHTTPHeaderField: "Content-Type") == "application/json")
-    }
 
     @Test
     func sendMessage_sendsMessageAsJSONQuestion() throws {
