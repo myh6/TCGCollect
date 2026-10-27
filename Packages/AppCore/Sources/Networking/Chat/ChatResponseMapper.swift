@@ -15,16 +15,12 @@ enum ChatResponseMapper {
 
     private struct AskResponse: Decodable {
         let answer: String
-        // Lossy, so one malformed card doesn't fail the whole answer.
         let cards: [Lossy<RemoteCard>]?
     }
 
     static func map(_ data: Data, from response: HTTPURLResponse) throws -> ChatAnswer {
-        let decoder = JSONDecoder()
-        decoder.dateDecodingStrategy = .iso8601
-
         guard response.statusCode == 200,
-              let askResponse = try? decoder.decode(AskResponse.self, from: data) else {
+              let askResponse = try? JSONDecoder().decode(AskResponse.self, from: data) else {
             throw Error.invalidData
         }
         let suggestions = (askResponse.cards ?? []).compactMap(\.value).compactMap(suggestion)

@@ -19,9 +19,10 @@ struct RemoteCard: Decodable {
     let set_name: String?
     let rarity: String?
     let printing: String?
-    let current_price: String
-    let currency: String
-    let current_fetched_at: Date
+    // Optional, and the date kept as text: a card without a usable price is still a valid card.
+    let current_price: String?
+    let currency: String?
+    let current_fetched_at: String?
 
     var card: Card {
         Card(
@@ -36,10 +37,12 @@ struct RemoteCard: Decodable {
         )
     }
 
-    /// nil when the price can't be read as a number.
+    /// nil when any price value is missing or can't be read.
     var price: PricePoint? {
-        // A string, so it converts to Decimal exactly; a JSON number would go through Double first.
-        guard let amount = Decimal(string: current_price, locale: Locale(identifier: "en_US_POSIX")) else { return nil }
-        return PricePoint(cardID: card_id, date: current_fetched_at, price: Money(amount: amount, currencyCode: currency))
+        guard let current_price, let currency, let current_fetched_at,
+              // A string, so it converts to Decimal exactly; a JSON number would go through Double first.
+              let amount = Decimal(string: current_price, locale: Locale(identifier: "en_US_POSIX")),
+              let date = ISO8601DateFormatter().date(from: current_fetched_at) else { return nil }
+        return PricePoint(cardID: card_id, date: date, price: Money(amount: amount, currencyCode: currency))
     }
 }
