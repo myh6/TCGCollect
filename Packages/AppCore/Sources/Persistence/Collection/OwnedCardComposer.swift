@@ -13,4 +13,9 @@ public enum OwnedCardComposer {
     public static func makeLocalOwnedCardCollection(storeURL: URL) throws -> OwnedCardCollection {
         LocalOwnedCardLoader(store: try SwiftDataOwnedCardStore(storeURL: storeURL))
     }
+
+    /// Searches the cards in `collection`. Takes the collection the app already made, so the store file is only opened once.
+    public static func makeOwnedCardSearcher(searching collection: OwnedCardLoader) -> OwnedCardSearcher {
+        FilteringOwnedCardSearcher(loader: collection)
+    }
 }
