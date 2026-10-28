@@ -19,10 +19,11 @@ struct CardSearchView: View {
     @State var query = ""
     // A fresh one each time the tab appears, so a card added on an earlier visit can be added again.
     @State private var addToCollection: AddToCollectionViewModel?
+    @AppStorage("searchScope") private var scope = SearchScope.all
 
     var body: some View {
         List {
-            if let ownedCards, ownedCards.state != .idle {
+            if scope.showsOwned, let ownedCards, ownedCards.state != .idle {
                 Section {
                     SearchResults(state: ownedCards.state, noResultsMessage: "None of your cards match.") { groups in
                         ForEach(groups.map(OwnedCardGroupPresentation.init)) { OwnedCardGroupRow(card: $0) }
@@ -31,7 +32,7 @@ struct CardSearchView: View {
                     SearchSectionHeader(title: "Cards you own", isSearching: ownedCards.state.isSearching)
                 }
             }
-            if let onlineCards, onlineCards.state != .idle {
+            if scope.showsOnline, let onlineCards, onlineCards.state != .idle {
                 Section {
                     SearchResults(state: onlineCards.state, noResultsMessage: "No cards found online.") { results in
                         ForEach(results, id: \.card.id) { result in
@@ -59,7 +60,7 @@ struct CardSearchView: View {
             }
         }
         .overlay {
-            if ownedCards?.state ?? .idle == .idle, onlineCards?.state ?? .idle == .idle {
+            if areShownSectionsIdle {
                 ContentUnavailableView(
                     "Search for Cards",
                     systemImage: "magnifyingglass",
@@ -70,10 +71,26 @@ struct CardSearchView: View {
         .navigationTitle("Search")
         .onAppear { addToCollection = makeAddToCollection?() }
         .searchable(text: $query, prompt: "Name, number, set or rarity")
+        .searchScopes($scope, isAvailable: ownedCards != nil && onlineCards != nil)
         // One task per section, so the cards you own never wait for the network.
         // A new query cancels the old tasks, so only the latest one is searched.
-        .task(id: query) { await afterTypingPause { await ownedCards?.search(query) } }
-        .task(id: query) { await afterTypingPause { await onlineCards?.search(query) } }
+        .task(id: ownedQuery) {
+            guard let ownedQuery else { return }
+            await afterTypingPause { await ownedCards?.search(ownedQuery) }
+        }
+        .task(id: onlineQuery) {
+            guard let onlineQuery else { return }
+            await afterTypingPause { await onlineCards?.search(onlineQuery) }
+        }
+    }
+
+    private var ownedQuery: String? { scope.showsOwned ? query : nil }
+    private var onlineQuery: String? { scope.showsOnline ? query : nil }
+
+    private var areShownSectionsIdle: Bool {
+        let ownedIsIdle = !scope.showsOwned || (ownedCards?.state ?? .idle) == .idle
+        let onlineIsIdle = !scope.showsOnline || (onlineCards?.state ?? .idle) == .idle
+        return ownedIsIdle && onlineIsIdle
     }
 
     private func afterTypingPause(_ search: () async -> Void) async {
@@ -206,6 +223,21 @@ struct CardRow<Trailing: View>: View {
             trailing()
         }
         .accessibilityElement(children: .combine)
+    }
+}
+
+private extension View {
+    @ViewBuilder
+    func searchScopes(_ scope: Binding<SearchScope>, isAvailable: Bool) -> some View {
+        if isAvailable {
+            searchScopes(scope) {
+                Text("All").tag(SearchScope.all)
+                Text("Your cards").tag(SearchScope.owned)
+                Text("Online").tag(SearchScope.online)
+            }
+        } else {
+            self
+        }
     }
 }
 
