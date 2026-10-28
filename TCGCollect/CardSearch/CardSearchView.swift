@@ -14,7 +14,11 @@ struct CardSearchView: View {
     let ownedCards: SearchSectionViewModel<OwnedCardGroup>?
     /// nil when the backend isn't configured, so only owned cards are searched.
     let onlineCards: SearchSectionViewModel<CardSearchResult>?
+    /// Makes what adds online cards to the collection, or nil to show no add buttons, e.g. without a collection.
+    var makeAddToCollection: (() -> AddToCollectionViewModel)?
     @State var query = ""
+    // A fresh one each time the tab appears, so a card added on an earlier visit can be added again.
+    @State private var addToCollection: AddToCollectionViewModel?
 
     var body: some View {
         List {
@@ -30,7 +34,16 @@ struct CardSearchView: View {
             if let onlineCards, onlineCards.state != .idle {
                 Section {
                     SearchResults(state: onlineCards.state, noResultsMessage: "No cards found online.") { results in
-                        ForEach(results.map { OnlineCardPresentation($0) }) { OnlineCardRow(card: $0) }
+                        ForEach(results, id: \.card.id) { result in
+                            OnlineCardRow(
+                                card: OnlineCardPresentation(result),
+                                addStatus: addToCollection?.status(for: result.card.id),
+                                copies: addToCollection?.copies(for: result.card.id) ?? 1,
+                                onIncrementCopies: { addToCollection?.incrementCopies(for: result.card.id) },
+                                onDecrementCopies: { addToCollection?.decrementCopies(for: result.card.id) },
+                                onAdd: { [addToCollection] in Task { await addToCollection?.add(result.card) } }
+                            )
+                        }
                     }
                 } header: {
                     SearchSectionHeader(title: "Online", isSearching: onlineCards.state.isSearching)
@@ -47,6 +60,7 @@ struct CardSearchView: View {
             }
         }
         .navigationTitle("Search")
+        .onAppear { addToCollection = makeAddToCollection?() }
         .searchable(text: $query, prompt: "Name, number, set or rarity")
         // One task per section, so the cards you own never wait for the network.
         // A new query cancels the old tasks, so only the latest one is searched.
@@ -118,11 +132,39 @@ struct OwnedCardGroupRow: View {
 
 struct OnlineCardRow: View {
     let card: OnlineCardPresentation
+    /// How adding the card to the collection is going, or nil to show no add controls.
+    var addStatus: AddToCollectionViewModel.Status?
+    var copies = 1
+    var onIncrementCopies: () -> Void = {}
+    var onDecrementCopies: () -> Void = {}
+    var onAdd: () -> Void = {}
+
+    // As wide as a chat tile, which fits "− 9 +" and "Added" on one line.
+    private static var controlWidth: CGFloat { 120 }
 
     var body: some View {
-        CardRow(name: card.name, details: card.details, imageURL: card.imageURL) {
-            Text(card.price)
-                .font(.subheadline.monospacedDigit())
+        VStack(alignment: .trailing, spacing: 8) {
+            CardRow(name: card.name, details: card.details, imageURL: card.imageURL) {
+                Text(card.price)
+                    .font(.subheadline.monospacedDigit())
+            }
+            // Apart from the row's details, so VoiceOver reads them as their own controls.
+            if let addStatus {
+                HStack(spacing: 12) {
+                    CopiesStepper(
+                        copies: copies,
+                        range: AddToCollectionViewModel.copiesRange,
+                        // The count saved, or being saved, stays as it is.
+                        isEnabled: addStatus == .notAdded || addStatus == .failed,
+                        onIncrement: onIncrementCopies,
+                        onDecrement: onDecrementCopies
+                    )
+                    .frame(width: Self.controlWidth)
+                    AddToCollectionButton(status: addStatus, action: onAdd)
+                        .lineLimit(1)
+                        .frame(width: Self.controlWidth)
+                }
+            }
         }
     }
 }

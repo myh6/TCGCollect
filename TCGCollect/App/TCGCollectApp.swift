@@ -59,7 +59,12 @@ struct TCGCollectApp: App {
                 }
                 Tab("Search", systemImage: "magnifyingglass", role: .search) {
                     NavigationStack {
-                        CardSearchView(ownedCards: ownedCardsSearch, onlineCards: onlineCardsSearch)
+                        CardSearchView(
+                            ownedCards: ownedCardsSearch,
+                            onlineCards: onlineCardsSearch,
+                            // Its own, apart from Chat's, so a card added in Chat can still be added here.
+                            makeAddToCollection: ownedCardCollection.map { collection in { AddToCollectionViewModel(saver: collection) } }
+                        )
                     }
                 }
             }
