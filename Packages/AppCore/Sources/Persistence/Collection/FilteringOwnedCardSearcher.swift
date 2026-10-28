@@ -19,7 +19,10 @@ public struct FilteringOwnedCardSearcher: OwnedCardSearcher {
     }
 
     public func search(_ query: String) async throws -> [OwnedCard] {
-        let words = query.split(whereSeparator: \.isWhitespace).map(String.init)
+        // Symbols like "&" or "-" don't say which card is meant, so only words with a letter or digit count.
+        let words = query.split(whereSeparator: \.isWhitespace)
+            .filter { word in word.contains { $0.isLetter || $0.isNumber } }
+            .map(String.init)
         guard !words.isEmpty else { return [] }
 
         return try await loader.load().filter { ownedCard in
