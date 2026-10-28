@@ -52,14 +52,18 @@ struct AddToCollectionButton: View {
             switch status {
             case .notAdded:
                 Label("Add", systemImage: "plus")
+                    .frame(maxWidth: .infinity)
             case .adding:
+                // Stays small, so the change to a spinner is easy to see.
                 ProgressView()
                     .controlSize(.mini)
                     .accessibilityLabel("Adding")
             case .added:
                 Label("Added", systemImage: "checkmark")
+                    .frame(maxWidth: .infinity)
             case .failed:
                 Label("Retry", systemImage: "arrow.clockwise")
+                    .frame(maxWidth: .infinity)
             }
         }
         .buttonStyle(.bordered)
