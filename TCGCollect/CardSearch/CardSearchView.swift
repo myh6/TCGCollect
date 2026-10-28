@@ -1,0 +1,209 @@
+//
+//  CardSearchView.swift
+//  TCGCollect
+//
+//  Created by Min-Yang Huang on 2026/10/28.
+//
+
+import SwiftUI
+import AppCore
+
+/// Searches the cards the user owns and the cards online as they type, in two sections.
+struct CardSearchView: View {
+    /// nil when the collection can't be opened, so only online cards are searched.
+    let ownedCards: SearchSectionViewModel<OwnedCardGroup>?
+    /// nil when the backend isn't configured, so only owned cards are searched.
+    let onlineCards: SearchSectionViewModel<CardSearchResult>?
+    @State var query = ""
+
+    var body: some View {
+        List {
+            if let ownedCards, ownedCards.state != .idle {
+                Section {
+                    SearchResults(state: ownedCards.state, noResultsMessage: "None of your cards match.") { groups in
+                        ForEach(groups.map(OwnedCardGroupPresentation.init)) { OwnedCardGroupRow(card: $0) }
+                    }
+                } header: {
+                    SearchSectionHeader(title: "Cards you own", isSearching: ownedCards.state.isSearching)
+                }
+            }
+            if let onlineCards, onlineCards.state != .idle {
+                Section {
+                    SearchResults(state: onlineCards.state, noResultsMessage: "No cards found online.") { results in
+                        ForEach(results.map { OnlineCardPresentation($0) }) { OnlineCardRow(card: $0) }
+                    }
+                } header: {
+                    SearchSectionHeader(title: "Online", isSearching: onlineCards.state.isSearching)
+                }
+            }
+        }
+        .overlay {
+            if ownedCards?.state ?? .idle == .idle, onlineCards?.state ?? .idle == .idle {
+                ContentUnavailableView(
+                    "Search for Cards",
+                    systemImage: "magnifyingglass",
+                    description: Text("Type a card's name, number, set or rarity.")
+                )
+            }
+        }
+        .navigationTitle("Search")
+        .searchable(text: $query, prompt: "Name, number, set or rarity")
+        // One task per section, so the cards you own never wait for the network.
+        // A new query cancels the old tasks, so only the latest one is searched.
+        .task(id: query) { await afterTypingPause { await ownedCards?.search(query) } }
+        .task(id: query) { await afterTypingPause { await onlineCards?.search(query) } }
+    }
+
+    private func afterTypingPause(_ search: () async -> Void) async {
+        // Throws when cancelled, i.e. the user kept typing.
+        guard (try? await Task.sleep(for: .milliseconds(500))) != nil else { return }
+        await search()
+    }
+}
+
+/// One section's results, or why there are none.
+struct SearchResults<Item: Equatable, Rows: View>: View {
+    let state: SearchSectionViewModel<Item>.State
+    let noResultsMessage: LocalizedStringKey
+    @ViewBuilder let rows: ([Item]) -> Rows
+
+    var body: some View {
+        switch state {
+        case .idle:
+            EmptyView()
+        case let .searching(previous) where previous.isEmpty:
+            ProgressView()
+                .frame(maxWidth: .infinity)
+        case let .searching(items), let .loaded(items):
+            if items.isEmpty {
+                Text(noResultsMessage)
+                    .foregroundStyle(.secondary)
+            } else {
+                rows(items)
+            }
+        case .failed:
+            Label("Couldn't search. Please try again.", systemImage: "exclamationmark.triangle")
+                .foregroundStyle(.secondary)
+        }
+    }
+}
+
+struct SearchSectionHeader: View {
+    let title: LocalizedStringKey
+    let isSearching: Bool
+
+    var body: some View {
+        HStack {
+            Text(title)
+            Spacer()
+            // While the results of the search before stay on screen.
+            if isSearching {
+                ProgressView()
+                    .controlSize(.mini)
+            }
+        }
+    }
+}
+
+struct OwnedCardGroupRow: View {
+    let card: OwnedCardGroupPresentation
+
+    var body: some View {
+        CardRow(name: card.name, details: card.details, imageURL: card.imageURL) {
+            Text(card.copies)
+                .font(.subheadline.weight(.semibold).monospacedDigit())
+        }
+    }
+}
+
+struct OnlineCardRow: View {
+    let card: OnlineCardPresentation
+
+    var body: some View {
+        CardRow(name: card.name, details: card.details, imageURL: card.imageURL) {
+            Text(card.price)
+                .font(.subheadline.monospacedDigit())
+        }
+    }
+}
+
+/// A card's image, name and details, with something at the trailing edge, e.g. its price.
+struct CardRow<Trailing: View>: View {
+    let name: String
+    let details: String?
+    let imageURL: URL?
+    @ViewBuilder let trailing: () -> Trailing
+
+    // A trading card's 63 × 88 mm shape.
+    private static var imageSize: CGSize { CGSize(width: 44, height: 62) }
+
+    var body: some View {
+        HStack(spacing: 12) {
+            CardImageView(url: imageURL)
+                .frame(width: Self.imageSize.width, height: Self.imageSize.height)
+                .clipShape(RoundedRectangle(cornerRadius: 4))
+            VStack(alignment: .leading, spacing: 2) {
+                Text(name)
+                    .font(.subheadline.weight(.semibold))
+                    .lineLimit(2)
+                if let details {
+                    Text(details)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+            }
+            Spacer()
+            trailing()
+        }
+        .accessibilityElement(children: .combine)
+    }
+}
+
+private extension SearchSectionViewModel.State {
+    var isSearching: Bool {
+        if case .searching = self { true } else { false }
+    }
+}
+
+#if DEBUG
+private let previewCards = [
+    Card(id: 1, name: "Monkey.D.Luffy", number: "OP01-024", rarity: "L"),
+    Card(id: 2, name: "Monkey.D.Luffy", number: "OP05-119", rarity: "SEC"),
+    Card(id: 3, name: "Luffy & Ace, a card with a long name", number: "OP02-013", rarity: "SR"),
+]
+
+#Preview("Results") {
+    NavigationStack {
+        CardSearchView(
+            ownedCards: SearchSectionViewModel { _ in
+                OwnedCardGroup.groups(from: [previewCards[0], previewCards[0], previewCards[0], previewCards[2]].map { OwnedCard(card: $0) })
+            },
+            onlineCards: SearchSectionViewModel { _ in
+                previewCards.enumerated().map { index, card in
+                    CardSearchResult(
+                        card: card,
+                        price: index == 1 ? nil : PricePoint(cardID: card.id, date: .now, price: Money(amount: Decimal(index) * 20 + 1.5, currencyCode: "USD"))
+                    )
+                }
+            },
+            query: "luffy"
+        )
+    }
+}
+
+#Preview("Nothing found") {
+    NavigationStack {
+        CardSearchView(
+            ownedCards: SearchSectionViewModel { _ in [] },
+            onlineCards: SearchSectionViewModel { _ in throw CancellationError() },
+            query: "zzz"
+        )
+    }
+}
+
+#Preview("Empty") {
+    NavigationStack {
+        CardSearchView(ownedCards: SearchSectionViewModel { _ in [] }, onlineCards: SearchSectionViewModel { _ in [] })
+    }
+}
+#endif
