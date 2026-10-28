@@ -21,6 +21,9 @@ struct TCGCollectApp: App {
     @State private var addToCollectionViewModel: AddToCollectionViewModel?
     // Owned here so the cards stay on screen while the tab reloads them.
     @State private var collectionViewModel: CollectionViewModel?
+    // Owned here so the results stay on screen after switching tabs.
+    @State private var ownedCardsSearch: SearchSectionViewModel<OwnedCardGroup>?
+    @State private var onlineCardsSearch = Self.makeOnlineCardsSearch()
 
     init() {
         // Both from the same collection, so the app never opens the store twice.
@@ -28,6 +31,9 @@ struct TCGCollectApp: App {
         _ownedCardCollection = State(initialValue: collection)
         _addToCollectionViewModel = State(initialValue: collection.map { AddToCollectionViewModel(saver: $0) })
         _collectionViewModel = State(initialValue: collection.map { CollectionViewModel(loader: $0) })
+        _ownedCardsSearch = State(initialValue: collection.map {
+            CardSearchUIComposer.makeOwnedCardsSection(searching: OwnedCardComposer.makeOwnedCardSearcher(searching: $0))
+        })
     }
 
     var body: some Scene {
@@ -51,6 +57,11 @@ struct TCGCollectApp: App {
                         }
                     }
                 }
+                Tab("Search", systemImage: "magnifyingglass", role: .search) {
+                    NavigationStack {
+                        CardSearchView(ownedCards: ownedCardsSearch, onlineCards: onlineCardsSearch)
+                    }
+                }
             }
             .environment(\.imageLoader, imageLoader)
         }
@@ -64,6 +75,18 @@ struct TCGCollectApp: App {
             return ChatViewModel(loader: loader)
         } catch {
             Logger(subsystem: "TCGCollect", category: "Chat").error("Chat unavailable: \(String(describing: error))")
+            return nil
+        }
+    }
+
+    /// nil when the backend isn't configured, so only the cards the user owns are searched.
+    private static func makeOnlineCardsSearch() -> SearchSectionViewModel<CardSearchResult>? {
+        do {
+            let configuration = try BackendConfiguration(infoDictionary: Bundle.main.infoDictionary ?? [:])
+            let searcher = CardSearchComposer.makeRemoteCardSearcher(baseURL: configuration.baseURL, apiKey: configuration.apiKey)
+            return CardSearchUIComposer.makeOnlineCardsSection(searching: searcher)
+        } catch {
+            Logger(subsystem: "TCGCollect", category: "Search").error("Online search unavailable: \(String(describing: error))")
             return nil
         }
     }
