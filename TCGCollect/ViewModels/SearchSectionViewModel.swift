@@ -38,12 +38,15 @@ final class SearchSectionViewModel<Item: Equatable> {
             return
         }
 
+        let stateBeforeSearching = state
         state = .searching(previous: state.items)
+        let stateAfterSearching: State
         do {
-            state = .loaded(try await searchItems(query))
+            stateAfterSearching = .loaded(try await searchItems(query))
         } catch {
-            state = .failed
+            stateAfterSearching = .failed
         }
+        state = Task.isCancelled ? stateBeforeSearching : stateAfterSearching
     }
 }
 

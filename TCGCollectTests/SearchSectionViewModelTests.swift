@@ -89,6 +89,31 @@ struct SearchSectionViewModelTests {
         #expect(sut.state == .idle)
     }
 
+    // The view cancels the search when the user keeps typing, but a search that's already running may still return results.
+    @Test func search_keepsPreviousResultsWhenCancelledSearchStillDeliversResults() async {
+        let (sut, spy) = makeSUT()
+        await search(sut, for: "lu", spy: spy, completingWith: .success(["Luffy"]))
+
+        let searching = await startSearching(sut, for: "luf", spy: spy, at: 1)
+        searching.cancel()
+        spy.complete(with: .success(["Luffy Leader"]), at: 1)
+        await searching.value
+
+        #expect(sut.state == .loaded(["Luffy"]))
+    }
+
+    // A cancelled network search throws, but the user asked for it to stop: not an error to show.
+    @Test func search_doesNotFailWhenCancelledSearchFails() async {
+        let (sut, spy) = makeSUT()
+
+        let searching = await startSearching(sut, for: "luffy", spy: spy)
+        searching.cancel()
+        spy.complete(with: .failure(CancellationError()))
+        await searching.value
+
+        #expect(sut.state == .idle)
+    }
+
     // MARK: - Helpers
     private func makeSUT() -> (sut: SearchSectionViewModel<String>, spy: SearchSpy) {
         let spy = SearchSpy()
