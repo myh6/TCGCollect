@@ -48,6 +48,27 @@ struct FilteringOwnedCardSearcherTests {
         #expect(loader.loadCount == 0)
     }
 
+    // Symbols don't say which card is meant, so they shouldn't stop "luffy & ace" from finding "Luffy & Ace".
+    @Test(arguments: ["luffy & ace", "luffy - ace", "luffy · ace", "luffy && ace"])
+    func search_ignoresWordsWithoutLettersOrDigits(query: String) async throws {
+        let luffyAndAce = makeOwnedCard(name: "Luffy & Ace")
+        let (sut, _) = makeSUT(result: .success([luffyAndAce, makeOwnedCard(name: "Monkey D. Luffy")]))
+
+        let results = try await sut.search(query)
+
+        #expect(results == [luffyAndAce])
+    }
+
+    @Test(arguments: ["&", "- ·", "!!!"])
+    func search_deliversNothingWithoutLoadingForQueryOfOnlySymbols(query: String) async throws {
+        let (sut, loader) = makeSUT(result: .success([makeOwnedCard(name: "Luffy & Ace")]))
+
+        let results = try await sut.search(query)
+
+        #expect(results.isEmpty)
+        #expect(loader.loadCount == 0)
+    }
+
     @Test(arguments: ["luffy", "LUFFY", "uff", "Monkey D"])
     func search_matchesAnyPartOfNameIgnoringCase(query: String) async throws {
         let luffy = makeOwnedCard(name: "Monkey D. Luffy", number: "OP01-001")
