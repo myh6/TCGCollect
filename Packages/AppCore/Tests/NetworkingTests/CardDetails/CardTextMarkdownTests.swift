@@ -30,6 +30,10 @@ struct CardTextMarkdownTests {
         expect("first\(lineBreak)second", becomes: "first\nsecond")
     }
 
+    @Test func markdown_removesLineBreaksAroundText() {
+        expect("<br> text <br/>", becomes: "text")
+    }
+
     @Test(arguments: ["\r\n", "\n", "  "])
     func markdown_treatsRawLineBreaksAndRepeatedSpacesAsOneSpace(whitespace: String) {
         expect("first\(whitespace)second", becomes: "first second")

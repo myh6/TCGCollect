@@ -53,6 +53,6 @@ enum CardTextMarkdown {
     private static func tidyingSpaces(in text: String) -> String {
         text.replacing(/[ ]+/, with: " ")
             .replacing(/[ ]*\n[ ]*/, with: "\n")
-            .trimmingCharacters(in: .whitespaces)
+            .trimmingCharacters(in: .whitespacesAndNewlines)
     }
 }
