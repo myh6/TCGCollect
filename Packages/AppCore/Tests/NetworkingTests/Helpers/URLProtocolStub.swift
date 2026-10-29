@@ -33,6 +33,10 @@ class URLProtocolStub: URLProtocol {
         states.withLock { $0[ObjectIdentifier(self)]?.bodies ?? [] }
     }
 
+    class var requestJSONBodies: [NSDictionary?] {
+        requestBodies.map { body in body.flatMap { try? JSONSerialization.jsonObject(with: $0) as? NSDictionary } }
+    }
+
     /// Clears what this subclass recorded and returns a session whose requests it answers with `data`.
     class func makeSession(replyingWith data: Data) -> URLSession {
         states.withLock { $0[ObjectIdentifier(self)] = State(data: data) }
