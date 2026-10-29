@@ -23,6 +23,7 @@ struct CardSearchComposerTests {
         #expect(requests.map(\.url) == [URL(string: "http://base-url.com/v1/search")!])
         #expect(requests.map(\.httpMethod) == ["POST"])
         #expect(requests.map { $0.value(forHTTPHeaderField: "X-API-Key") } == ["an api key"])
+        #expect(Stub.requestBodies.map(jsonObject) == [["query": "luffy", "limit": 20]])
     }
 
     @Test func makeRemoteCardSearcher_deliversResultsFromBackend() async throws {
@@ -36,6 +37,10 @@ struct CardSearchComposerTests {
     }
 
     // MARK: - Helpers
+    private func jsonObject(_ body: Data?) -> NSDictionary? {
+        body.flatMap { try? JSONSerialization.jsonObject(with: $0) as? NSDictionary }
+    }
+
     private func makeResultsJSON(_ cards: [[String: Any]]) -> Data {
         try! JSONSerialization.data(withJSONObject: cards)
     }

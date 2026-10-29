@@ -12,6 +12,10 @@ import Foundation
 public enum CardSearchComposer {
     public static func makeRemoteCardSearcher(baseURL: URL, apiKey: String, session: URLSession? = nil) -> CardSearcher {
         let client = BackendClient.make(apiKey: apiKey, session: session ?? URLSession(configuration: .default))
-        return RemoteCardSearcher(baseURL: baseURL, client: client)
+        return RemoteLoader(
+            client: client,
+            makeRequest: { query in try CardSearchEndpoint.search(query: query).urlRequest(baseURL: baseURL) },
+            map: CardSearchResponseMapper.map
+        )
     }
 }
