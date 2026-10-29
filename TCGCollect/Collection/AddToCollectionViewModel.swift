@@ -22,6 +22,14 @@ final class AddToCollectionViewModel {
         var canAdd: Bool { self == .notAdded || self == .failed }
     }
 
+    struct Controls {
+        let status: Status
+        let copies: Int
+        let incrementCopies: () -> Void
+        let decrementCopies: () -> Void
+        let add: () -> Void
+    }
+
     /// How many copies can be added at once. Kept to one digit for the tile's layout, not a limit on how many
     /// copies someone owns: adding the card again from another suggestion adds more.
     static let copiesRange = 1...9
@@ -41,6 +49,16 @@ final class AddToCollectionViewModel {
 
     func copies(for cardID: Card.ID) -> Int {
         copies[cardID, default: Self.copiesRange.lowerBound]
+    }
+
+    func controls(for card: Card) -> Controls {
+        Controls(
+            status: status(for: card.id),
+            copies: copies(for: card.id),
+            incrementCopies: { self.incrementCopies(for: card.id) },
+            decrementCopies: { self.decrementCopies(for: card.id) },
+            add: { Task { await self.add(card) } }
+        )
     }
 
     func incrementCopies(for cardID: Card.ID) {
