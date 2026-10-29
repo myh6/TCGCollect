@@ -1,0 +1,33 @@
+{
+  "configurations" : [
+    {
+      "id" : "75A935E4-66B5-4E04-8A41-FC3A2B49C3F1",
+      "name" : "Test Scheme Action",
+      "options" : {
+
+      }
+    }
+  ],
+  "defaultOptions" : {
+    "codeCoverage" : {
+      "targets" : [
+        {
+          "containerPath" : "container:",
+          "identifier" : "HoloCard",
+          "name" : "HoloCard"
+        }
+      ]
+    },
+    "performanceAntipatternCheckerEnabled" : true
+  },
+  "testTargets" : [
+    {
+      "target" : {
+        "containerPath" : "container:",
+        "identifier" : "HoloCardTests",
+        "name" : "HoloCardTests"
+      }
+    }
+  ],
+  "version" : 1
+}

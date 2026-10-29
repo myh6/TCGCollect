@@ -8,6 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		0F04966C307D0E9D00378952 /* AppCore in Frameworks */ = {isa = PBXBuildFile; productRef = 0F04966B307D0E9D00378952 /* AppCore */; };
+		4848C5FFFB19BD9C62CA32B2 /* HoloCard in Frameworks */ = {isa = PBXBuildFile; productRef = 1E3DB76E990168048F994AC0 /* HoloCard */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -32,6 +33,7 @@
 		0F04964D307CFDDE00378952 /* TCGCollectTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = TCGCollectTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		0F049657307CFDDE00378952 /* TCGCollectUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = TCGCollectUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		0F0496FF307D0E9D00378952 /* AppCore */ = {isa = PBXFileReference; lastKnownFileType = wrapper; name = AppCore; path = Packages/AppCore; sourceTree = "<group>"; };
+		B8F1C2F46FC607DA48A8BAC4 /* HoloCard */ = {isa = PBXFileReference; lastKnownFileType = wrapper; name = HoloCard; path = Packages/HoloCard; sourceTree = "<group>"; };
 		0F5A73613080C60600B42482 /* Networking.xctestplan */ = {isa = PBXFileReference; lastKnownFileType = text; name = Networking.xctestplan; path = Packages/AppCore/Networking.xctestplan; sourceTree = "<group>"; };
 		0F5A739630889D9C00B42482 /* TCGCollect.xctestplan */ = {isa = PBXFileReference; lastKnownFileType = text; path = TCGCollect.xctestplan; sourceTree = "<group>"; };
 		0F5A73973088A1A600B42482 /* ci.sh */ = {isa = PBXFileReference; lastKnownFileType = text.script.sh; path = ci.sh; sourceTree = "<group>"; };
@@ -64,6 +66,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				0F04966C307D0E9D00378952 /* AppCore in Frameworks */,
+				4848C5FFFB19BD9C62CA32B2 /* HoloCard in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -94,6 +97,7 @@
 				0F5A7401308A000000B42482 /* Secrets.example.xcconfig */,
 				0F5A73613080C60600B42482 /* Networking.xctestplan */,
 				0F0496FF307D0E9D00378952 /* AppCore */,
+				B8F1C2F46FC607DA48A8BAC4 /* HoloCard */,
 				0F049640307CFDDD00378952 /* TCGCollect */,
 				0F049650307CFDDE00378952 /* TCGCollectTests */,
 				0F04965A307CFDDE00378952 /* TCGCollectUITests */,
@@ -140,6 +144,7 @@
 			name = TCGCollect;
 			packageProductDependencies = (
 				0F04966B307D0E9D00378952 /* AppCore */,
+				1E3DB76E990168048F994AC0 /* HoloCard */,
 			);
 			productName = TCGCollect;
 			productReference = 0F04963E307CFDDD00378952 /* TCGCollect.app */;
@@ -650,6 +655,10 @@
 		0F04966B307D0E9D00378952 /* AppCore */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = AppCore;
+		};
+		1E3DB76E990168048F994AC0 /* HoloCard */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = HoloCard;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

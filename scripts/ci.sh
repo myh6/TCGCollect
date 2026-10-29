@@ -1,5 +1,5 @@
 #!/bin/bash
-# Runs every unit test: the AppCore package's (swift test) and the app target's (TCGCollectTests on an iOS Simulator).
+# Runs every unit test: the AppCore and HoloCard packages' (swift test) and the app target's (TCGCollectTests on an iOS Simulator).
 # The end-to-end tests skip themselves because E2E_BASE_URL and E2E_API_KEY aren't set here.
 #
 # Usage: scripts/ci.sh            (from anywhere in the repo)
@@ -17,6 +17,9 @@ fi
 
 echo "==> AppCore package tests"
 swift test --package-path Packages/AppCore
+
+echo "==> HoloCard package tests"
+swift test --package-path Packages/HoloCard
 
 echo "==> App unit tests"
 if [[ -z "${SIMULATOR_ID:-}" ]]; then
