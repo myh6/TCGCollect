@@ -8,6 +8,7 @@
 import SwiftUI
 
 public struct HoloCardView<Card: View>: View {
+    private let style: HoloStyle
     private let maxAngle: Angle
     private let cornerRadius: CGFloat
     private let card: Card
@@ -16,14 +17,15 @@ public struct HoloCardView<Card: View>: View {
     @State private var isTouching = false
     @State private var size = CGSize.zero
 
-    public init(maxAngle: Angle = .degrees(15), cornerRadius: CGFloat = 12, @ViewBuilder card: () -> Card) {
+    public init(style: HoloStyle = .plain, maxAngle: Angle = .degrees(15), cornerRadius: CGFloat = 12, @ViewBuilder card: () -> Card) {
+        self.style = style
         self.maxAngle = maxAngle
         self.cornerRadius = cornerRadius
         self.card = card()
     }
 
     public var body: some View {
-        HoloCardSurface(tilt: tilt, isLit: isTouching, cornerRadius: cornerRadius) { card }
+        HoloCardSurface(tilt: tilt, style: style, isLit: isTouching, cornerRadius: cornerRadius) { card }
             .onGeometryChange(for: CGSize.self, of: \.size) { size = $0 }
             .gesture(tiltGesture)
     }
@@ -47,7 +49,7 @@ public struct HoloCardView<Card: View>: View {
 
 #if DEBUG
 #Preview("Drag the card") {
-    HoloCardView { PreviewCard() }
+    HoloCardView(style: .rainbow) { PreviewCard() }
         .frame(width: 260)
         .padding(40)
 }
@@ -72,7 +74,7 @@ public struct HoloCardView<Card: View>: View {
 @MainActor
 private func tiltedCard(_ name: String, pointer: UnitPoint) -> some View {
     VStack(spacing: 12) {
-        HoloCardSurface(tilt: HoloTilt(pointer: pointer), isLit: pointer != .center) { PreviewCard() }
+        HoloCardSurface(tilt: HoloTilt(pointer: pointer), style: .rainbow, isLit: pointer != .center) { PreviewCard() }
             .frame(width: 140)
         Text(name).font(.caption)
     }
