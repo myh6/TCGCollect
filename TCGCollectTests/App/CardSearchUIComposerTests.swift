@@ -51,7 +51,47 @@ struct CardSearchUIComposerTests {
         #expect(sut.state == .loaded(results))
     }
 
+    @Test func addToCollection_savesWithSaver() async {
+        let card = makeCard(id: 1)
+        let saver = OwnedCardSaverStub(result: .success(()))
+        let sut = CardSearchUIComposer.makeAddToCollection(saving: saver, refreshing: makeOwnedCardsSection(searching: OwnedCardSearcherStub(result: [])))
+
+        await sut.add(card)
+
+        #expect(saver.savedCards == [[card]])
+    }
+
+    @Test func addToCollection_searchesOwnedCardsAgainAfterAdding() async {
+        let searcher = OwnedCardSearcherStub(result: [])
+        let ownedCards = makeOwnedCardsSection(searching: searcher)
+        let sut = CardSearchUIComposer.makeAddToCollection(saving: OwnedCardSaverStub(result: .success(())), refreshing: ownedCards)
+        await ownedCards.search("luffy")
+
+        await sut.add(makeCard(id: 1))
+
+        #expect(searcher.queries == ["luffy", "luffy"])
+    }
+
+    @Test func addToCollection_doesNotSearchOwnedCardsAgainWhenAddingFails() async {
+        let searcher = OwnedCardSearcherStub(result: [])
+        let ownedCards = makeOwnedCardsSection(searching: searcher)
+        let sut = CardSearchUIComposer.makeAddToCollection(saving: OwnedCardSaverStub(result: .failure(anyError())), refreshing: ownedCards)
+        await ownedCards.search("luffy")
+
+        await sut.add(makeCard(id: 1))
+
+        #expect(searcher.queries == ["luffy"])
+    }
+
     // MARK: - Helpers
+    private func makeOwnedCardsSection(searching searcher: OwnedCardSearcher) -> SearchSectionViewModel<OwnedCardGroup> {
+        CardSearchUIComposer.makeOwnedCardsSection(searching: searcher)
+    }
+
+    private func anyError() -> Error {
+        NSError(domain: "any error", code: 0)
+    }
+
     private func makeCard(id: Int) -> Card {
         Card(id: id, name: "card \(id)")
     }
@@ -83,6 +123,21 @@ struct CardSearchUIComposerTests {
         func search(_ query: String) async throws -> [CardSearchResult] {
             queries.append(query)
             return result
+        }
+    }
+
+    @MainActor
+    private final class OwnedCardSaverStub: OwnedCardSaver {
+        private(set) var savedCards = [[Card]]()
+        private let result: Result<Void, Error>
+
+        init(result: Result<Void, Error>) {
+            self.result = result
+        }
+
+        func save(_ ownedCards: [OwnedCard]) async throws {
+            savedCards.append(ownedCards.map(\.card))
+            try result.get()
         }
     }
 }

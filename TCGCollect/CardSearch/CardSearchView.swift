@@ -42,15 +42,7 @@ struct CardSearchView: View {
                                 copies: addToCollection?.copies(for: result.card.id) ?? 1,
                                 onIncrementCopies: { addToCollection?.incrementCopies(for: result.card.id) },
                                 onDecrementCopies: { addToCollection?.decrementCopies(for: result.card.id) },
-                                onAdd: { [addToCollection] in
-                                    Task {
-                                        await addToCollection?.add(result.card)
-                                        // So the card shows up in the cards you own right away, with its new count.
-                                        if addToCollection?.status(for: result.card.id) == .added {
-                                            await ownedCards?.search(query)
-                                        }
-                                    }
-                                }
+                                onAdd: { Task { await addToCollection?.add(result.card) } }
                             )
                         }
                     }

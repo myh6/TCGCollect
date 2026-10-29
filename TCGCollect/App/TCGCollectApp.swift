@@ -62,14 +62,18 @@ struct TCGCollectApp: App {
                         CardSearchView(
                             ownedCards: ownedCardsSearch,
                             onlineCards: onlineCardsSearch,
-                            // Its own, apart from Chat's, so a card added in Chat can still be added here.
-                            makeAddToCollection: ownedCardCollection.map { collection in { AddToCollectionViewModel(saver: collection) } }
+                            makeAddToCollection: makeSearchAddToCollection
                         )
                     }
                 }
             }
             .environment(\.imageLoader, imageLoader)
         }
+    }
+
+    private var makeSearchAddToCollection: (() -> AddToCollectionViewModel)? {
+        guard let ownedCardCollection, let ownedCardsSearch else { return nil }
+        return { CardSearchUIComposer.makeAddToCollection(saving: ownedCardCollection, refreshing: ownedCardsSearch) }
     }
 
     /// nil when the backend isn't configured, e.g. in Release builds for now.
