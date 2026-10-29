@@ -12,6 +12,10 @@ import Domain
 /// client: wrapping it in `APIKeyHTTPClient` would send our backend's key to them.
 public enum ImageComposer {
     public static func makeRemoteImageDataLoader(session: URLSession? = nil) -> ImageDataLoader {
-        RemoteImageDataLoader(client: URLSessionHTTPClient(session: session ?? URLSession(configuration: .default)))
+        RemoteLoader(
+            client: URLSessionHTTPClient(session: session ?? URLSession(configuration: .default)),
+            makeRequest: { url in URLRequest(url: url) },
+            map: ImageDataMapper.map
+        )
     }
 }
