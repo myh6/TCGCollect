@@ -17,7 +17,6 @@ public struct OnePieceDetails: Hashable, Sendable {
     public let attributes: [String]
     public let types: [String]
     public let effect: String?
-    public let trigger: String?
 
     public init(
         category: Category,
@@ -28,8 +27,7 @@ public struct OnePieceDetails: Hashable, Sendable {
         life: Int? = nil,
         attributes: [String] = [],
         types: [String] = [],
-        effect: String? = nil,
-        trigger: String? = nil
+        effect: String? = nil
     ) {
         self.category = category
         self.colors = colors
@@ -40,6 +38,5 @@ public struct OnePieceDetails: Hashable, Sendable {
         self.attributes = attributes
         self.types = types
         self.effect = effect
-        self.trigger = trigger
     }
 }
