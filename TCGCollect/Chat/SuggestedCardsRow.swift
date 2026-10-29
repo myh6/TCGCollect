@@ -10,27 +10,19 @@ import AppCore
 
 /// The cards a chat answer refers to, in the order the backend sent them.
 struct SuggestedCardsRow: View {
-    let cards: [SuggestedCardPresentation]
-    /// How adding each card to the collection is going, or nil to show no add button, e.g. without a collection.
-    var addStatus: (Card.ID) -> AddToCollectionViewModel.Status? = { _ in nil }
-    /// How many copies of each card adding it adds.
-    var copies: (Card.ID) -> Int = { _ in 1 }
-    var onIncrementCopies: (Card.ID) -> Void = { _ in }
-    var onDecrementCopies: (Card.ID) -> Void = { _ in }
-    var onAdd: (Card.ID) -> Void = { _ in }
+    struct Suggestion: Identifiable {
+        let card: SuggestedCardPresentation
+        var addControls: AddToCollectionViewModel.Controls?
+        var id: Card.ID { card.id }
+    }
+
+    let suggestions: [Suggestion]
 
     var body: some View {
         ScrollView(.horizontal) {
             HStack(alignment: .top, spacing: 12) {
-                ForEach(cards) { card in
-                    SuggestedCardTile(
-                        card: card,
-                        addStatus: addStatus(card.id),
-                        copies: copies(card.id),
-                        onIncrementCopies: { onIncrementCopies(card.id) },
-                        onDecrementCopies: { onDecrementCopies(card.id) },
-                        onAdd: { onAdd(card.id) }
-                    )
+                ForEach(suggestions) { suggestion in
+                    SuggestedCardTile(card: suggestion.card, addControls: suggestion.addControls)
                 }
             }
         }
@@ -42,11 +34,7 @@ struct SuggestedCardsRow: View {
 
 struct SuggestedCardTile: View {
     let card: SuggestedCardPresentation
-    var addStatus: AddToCollectionViewModel.Status?
-    var copies = 1
-    var onIncrementCopies: () -> Void = {}
-    var onDecrementCopies: () -> Void = {}
-    var onAdd: () -> Void = {}
+    var addControls: AddToCollectionViewModel.Controls?
 
     // A trading card's 63 × 88 mm shape.
     private static let imageSize = CGSize(width: 120, height: 168)
@@ -54,16 +42,16 @@ struct SuggestedCardTile: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             details
-            if let addStatus {
+            if let addControls {
                 CopiesStepper(
-                    copies: copies,
+                    copies: addControls.copies,
                     range: AddToCollectionViewModel.copiesRange,
                     // The count saved, or being saved, stays as it is.
-                    isEnabled: addStatus.canAdd,
-                    onIncrement: onIncrementCopies,
-                    onDecrement: onDecrementCopies
+                    isEnabled: addControls.status.canAdd,
+                    onIncrement: addControls.incrementCopies,
+                    onDecrement: addControls.decrementCopies
                 )
-                AddToCollectionButton(status: addStatus, action: onAdd)
+                AddToCollectionButton(status: addControls.status, action: addControls.add)
             }
         }
         .frame(width: Self.imageSize.width, alignment: .leading)
@@ -102,23 +90,29 @@ struct SuggestedCardTile: View {
             price: PricePoint(cardID: card.id, date: .now, price: Money(amount: Decimal(index) * 12.5 + 0.99, currencyCode: "USD"))
         ))
     }
-    SuggestedCardsRow(cards: cards)
+    SuggestedCardsRow(suggestions: cards.map { SuggestedCardsRow.Suggestion(card: $0) })
         .padding()
 }
 
 #Preview("Adding copies") {
     let statuses: [AddToCollectionViewModel.Status] = [.notAdded, .adding, .added, .failed]
-    let cards = statuses.indices.map { index in
-        SuggestedCardPresentation(ChatAnswer.Suggestion(
-            card: Card(id: index, name: "Card \(index)", number: "OP01-00\(index)"),
-            price: PricePoint(cardID: index, date: .now, price: Money(amount: 1.99, currencyCode: "USD"))
-        ))
+    let copies = [1, 3, 3, 9]
+    let suggestions = statuses.indices.map { index in
+        SuggestedCardsRow.Suggestion(
+            card: SuggestedCardPresentation(ChatAnswer.Suggestion(
+                card: Card(id: index, name: "Card \(index)", number: "OP01-00\(index)"),
+                price: PricePoint(cardID: index, date: .now, price: Money(amount: 1.99, currencyCode: "USD"))
+            )),
+            addControls: AddToCollectionViewModel.Controls(
+                status: statuses[index],
+                copies: copies[index],
+                incrementCopies: {},
+                decrementCopies: {},
+                add: {}
+            )
+        )
     }
-    SuggestedCardsRow(
-        cards: cards,
-        addStatus: { statuses[$0] },
-        copies: { [1, 3, 3, 9][$0] }
-    )
+    SuggestedCardsRow(suggestions: suggestions)
     .padding()
 }
 #endif

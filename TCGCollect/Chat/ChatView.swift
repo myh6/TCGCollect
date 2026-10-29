@@ -49,14 +49,12 @@ struct ChatView: View {
                 Text(answer.text)
                     .textSelection(.enabled)
                 if !answer.suggestions.isEmpty {
-                    SuggestedCardsRow(
-                        cards: answer.suggestions.map { SuggestedCardPresentation($0) },
-                        addStatus: { addToCollection?.status(for: $0) },
-                        copies: { addToCollection?.copies(for: $0) ?? 1 },
-                        onIncrementCopies: { addToCollection?.incrementCopies(for: $0) },
-                        onDecrementCopies: { addToCollection?.decrementCopies(for: $0) },
-                        onAdd: { add(cardID: $0, from: answer) }
-                    )
+                    SuggestedCardsRow(suggestions: answer.suggestions.map { suggestion in
+                        SuggestedCardsRow.Suggestion(
+                            card: SuggestedCardPresentation(suggestion),
+                            addControls: addToCollection?.controls(for: suggestion.card)
+                        )
+                    })
                 }
             }
         case let .failed(error):
@@ -82,11 +80,6 @@ struct ChatView: View {
         }
         .labelStyle(.iconOnly)
         .font(.title2)
-    }
-
-    private func add(cardID: Card.ID, from answer: ChatAnswer) {
-        guard let addToCollection, let card = answer.suggestions.first(where: { $0.card.id == cardID })?.card else { return }
-        Task { await addToCollection.add(card) }
     }
 
     private func send() {
