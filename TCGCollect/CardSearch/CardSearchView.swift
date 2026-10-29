@@ -21,26 +21,8 @@ struct CardSearchView: View {
 
     var body: some View {
         List {
-            if scope.showsOwned, let ownedCards, ownedCards.state != .idle {
-                Section {
-                    SearchResults(state: ownedCards.state, noResultsMessage: "None of your cards match.") { groups in
-                        ForEach(groups.map(OwnedCardGroupPresentation.init)) { OwnedCardGroupRow(card: $0) }
-                    }
-                } header: {
-                    SearchSectionHeader(title: "Cards you own", isSearching: ownedCards.state.isSearching)
-                }
-            }
-            if scope.showsOnline, let onlineCards, onlineCards.state != .idle {
-                Section {
-                    SearchResults(state: onlineCards.state, noResultsMessage: "No cards found online.") { results in
-                        ForEach(results, id: \.card.id) { result in
-                            OnlineCardRow(card: OnlineCardPresentation(result), addControls: addToCollection?.controls(for: result.card))
-                        }
-                    }
-                } header: {
-                    SearchSectionHeader(title: "Online", isSearching: onlineCards.state.isSearching)
-                }
-            }
+            ownedCardsSection
+            onlineCardsSection
         }
         .overlay {
             if areShownSectionsIdle {
@@ -63,6 +45,34 @@ struct CardSearchView: View {
         .task(id: onlineQuery) {
             guard let onlineQuery else { return }
             await afterTypingPause { await onlineCards?.search(onlineQuery) }
+        }
+    }
+
+    @ViewBuilder
+    private var ownedCardsSection: some View {
+        if scope.showsOwned, let ownedCards, ownedCards.state != .idle {
+            Section {
+                SearchResults(state: ownedCards.state, noResultsMessage: "None of your cards match.") { groups in
+                    ForEach(groups.map(OwnedCardGroupPresentation.init)) { OwnedCardGroupRow(card: $0) }
+                }
+            } header: {
+                SearchSectionHeader(title: "Cards you own", isSearching: ownedCards.state.isSearching)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var onlineCardsSection: some View {
+        if scope.showsOnline, let onlineCards, onlineCards.state != .idle {
+            Section {
+                SearchResults(state: onlineCards.state, noResultsMessage: "No cards found online.") { results in
+                    ForEach(results, id: \.card.id) { result in
+                        OnlineCardRow(card: OnlineCardPresentation(result), addControls: addToCollection?.controls(for: result.card))
+                    }
+                }
+            } header: {
+                SearchSectionHeader(title: "Online", isSearching: onlineCards.state.isSearching)
+            }
         }
     }
 
