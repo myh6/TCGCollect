@@ -37,6 +37,8 @@ public struct HoloCardSurface<Card: View>: View {
         switch style {
         case .plain:
             EmptyView()
+        case .foil:
+            FoilShine(tilt: tilt)
         case .rainbow:
             RainbowShine(tilt: tilt)
         }

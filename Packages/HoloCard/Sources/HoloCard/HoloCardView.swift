@@ -49,9 +49,13 @@ public struct HoloCardView<Card: View>: View {
 
 #if DEBUG
 #Preview("Drag the card") {
-    HoloCardView(style: .rainbow) { PreviewCard() }
-        .frame(width: 260)
-        .padding(40)
+    HStack(spacing: 30) {
+        ForEach([HoloStyle.foil, .rainbow], id: \.self) { style in
+            HoloCardView(style: style) { PreviewCard() }
+                .frame(width: 200)
+        }
+    }
+    .padding(40)
 }
 
 #Preview("Fixed tilts") {

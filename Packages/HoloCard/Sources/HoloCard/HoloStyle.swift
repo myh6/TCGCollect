@@ -7,5 +7,6 @@
 
 public enum HoloStyle: Sendable, CaseIterable {
     case plain
+    case foil
     case rainbow
 }
