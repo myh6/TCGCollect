@@ -38,7 +38,7 @@ struct CardDetailPresentationTests {
         #expect(sut.printing == printing)
     }
 
-    @Test(arguments: [("Foil", HoloStyle.rainbow), ("Normal", .plain)])
+    @Test(arguments: [("Foil", HoloStyle.foil), ("Normal", .plain)])
     func init_usesCardHoloStyle(printing: String, expected: HoloStyle) {
         let sut = CardDetailPresentation(Card(id: 1, name: "a card", printing: printing))
 

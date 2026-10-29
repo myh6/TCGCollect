@@ -11,7 +11,7 @@ import HoloCard
 
 extension Card {
     nonisolated var holoStyle: HoloStyle {
-        isFoil ? .rainbow : .plain
+        isFoil ? .foil : .plain
     }
 
     private nonisolated var isFoil: Bool {

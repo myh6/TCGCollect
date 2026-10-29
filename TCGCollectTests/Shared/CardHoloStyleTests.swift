@@ -13,8 +13,8 @@ import HoloCard
 struct CardHoloStyleTests {
 
     @Test(arguments: ["Foil", "foil", "FOIL"])
-    func holoStyle_isRainbowForFoilPrinting(printing: String) {
-        #expect(makeCard(printing: printing).holoStyle == .rainbow)
+    func holoStyle_isFoilForFoilPrinting(printing: String) {
+        #expect(makeCard(printing: printing).holoStyle == .foil)
     }
 
     @Test(arguments: ["Normal", "", "Foil Etched"])
