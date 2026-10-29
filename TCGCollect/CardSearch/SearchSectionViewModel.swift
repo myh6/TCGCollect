@@ -24,6 +24,7 @@ final class SearchSectionViewModel<Item: Equatable> {
     static var minimumQueryLength: Int { 2 }
 
     private(set) var state = State.idle
+    private var lastQuery: String?
 
     private let searchItems: (String) async throws -> [Item]
 
@@ -34,9 +35,11 @@ final class SearchSectionViewModel<Item: Equatable> {
     func search(_ query: String) async {
         let query = query.trimmingCharacters(in: .whitespacesAndNewlines)
         guard query.count >= Self.minimumQueryLength else {
+            lastQuery = nil
             state = .idle
             return
         }
+        lastQuery = query
 
         let stateBeforeSearching = state
         state = .searching(previous: state.items)
@@ -47,6 +50,11 @@ final class SearchSectionViewModel<Item: Equatable> {
             stateAfterSearching = .failed
         }
         state = Task.isCancelled ? stateBeforeSearching : stateAfterSearching
+    }
+
+    func refresh() async {
+        guard let lastQuery else { return }
+        await search(lastQuery)
     }
 }
 

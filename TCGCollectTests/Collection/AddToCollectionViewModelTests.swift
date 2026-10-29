@@ -199,6 +199,54 @@ struct AddToCollectionViewModelTests {
         #expect(sut.status(for: 1) == .added)
     }
 
+    @Test(arguments: [
+        (AddToCollectionViewModel.Status.notAdded, true),
+        (.adding, false),
+        (.added, false),
+        (.failed, true),
+    ])
+    func status_canAddOnlyWhenNotAddedOrFailed(status: AddToCollectionViewModel.Status, canAdd: Bool) {
+        #expect(status.canAdd == canAdd)
+    }
+
+    @Test func controls_deliversCopiesAndStatusOfThatCard() async {
+        let card = makeCard(id: 1)
+        let (sut, saver) = makeSUT()
+        sut.incrementCopies(for: card.id)
+        await add(card, to: sut, saver: saver, completingWith: .success(()))
+
+        let controls = sut.controls(for: card)
+        let otherControls = sut.controls(for: makeCard(id: 2))
+
+        #expect(controls.copies == 2)
+        #expect(controls.status == .added)
+        #expect(otherControls.copies == 1)
+        #expect(otherControls.status == .notAdded)
+    }
+
+    @Test func controls_incrementAndDecrementCopiesOfOnlyThatCard() {
+        let card = makeCard(id: 1)
+        let (sut, _) = makeSUT()
+
+        sut.controls(for: card).incrementCopies()
+        sut.controls(for: card).incrementCopies()
+        sut.controls(for: card).decrementCopies()
+
+        #expect(sut.copies(for: card.id) == 2)
+        #expect(sut.copies(for: 2) == 1)
+    }
+
+    @Test func controls_addSavesThatCard() async {
+        let card = makeCard(id: 1)
+        let (sut, saver) = makeSUT()
+
+        sut.controls(for: card).add()
+        await saver.waitForSave(at: 0)
+
+        #expect(saver.saves.map { $0.map(\.card) } == [[card]])
+        saver.complete(with: .success(()))
+    }
+
     // MARK: - Helpers
     private func makeSUT() -> (sut: AddToCollectionViewModel, saver: SaverSpy) {
         let saver = SaverSpy()

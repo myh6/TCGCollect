@@ -114,6 +114,39 @@ struct SearchSectionViewModelTests {
         #expect(sut.state == .idle)
     }
 
+    @Test func refresh_doesNotSearchBeforeAnySearch() async {
+        let (sut, spy) = makeSUT()
+        spy.setCompletionForNewSearches(to: .success([]))
+
+        await sut.refresh()
+
+        #expect(spy.queries.isEmpty)
+        #expect(sut.state == .idle)
+    }
+
+    @Test func refresh_searchesLastQueryAgain() async {
+        let (sut, spy) = makeSUT()
+        await search(sut, for: "  luffy ", spy: spy, completingWith: .success(["Luffy"]))
+        spy.setCompletionForNewSearches(to: .success(["Luffy", "Luffy Leader"]))
+
+        await sut.refresh()
+
+        #expect(spy.queries == ["luffy", "luffy"])
+        #expect(sut.state == .loaded(["Luffy", "Luffy Leader"]))
+    }
+
+    @Test func refresh_doesNotSearchAfterShortQuery() async {
+        let (sut, spy) = makeSUT()
+        await search(sut, for: "luffy", spy: spy, completingWith: .success(["Luffy"]))
+        await sut.search("")
+        spy.setCompletionForNewSearches(to: .success(["Luffy"]))
+
+        await sut.refresh()
+
+        #expect(spy.queries == ["luffy"])
+        #expect(sut.state == .idle)
+    }
+
     // MARK: - Helpers
     private func makeSUT() -> (sut: SearchSectionViewModel<String>, spy: SearchSpy) {
         let spy = SearchSpy()

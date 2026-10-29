@@ -23,4 +23,14 @@ enum CardSearchUIComposer {
             try await searcher.search(query)
         }
     }
+
+    static func makeAddToCollection(
+        saving saver: OwnedCardSaver,
+        refreshing ownedCards: SearchSectionViewModel<OwnedCardGroup>
+    ) -> AddToCollectionViewModel {
+        AddToCollectionViewModel(saver: OwnedCardSaverAfterSaveDecorator(
+            decoratee: saver,
+            afterSave: { await ownedCards.refresh() }
+        ))
+    }
 }
