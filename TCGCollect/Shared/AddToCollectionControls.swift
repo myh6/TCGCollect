@@ -69,7 +69,7 @@ struct AddToCollectionButton: View {
         .buttonStyle(.bordered)
         .controlSize(.small)
         .tint(status == .failed ? .red : nil)
-        .disabled(status == .adding || status == .added)
+        .disabled(!status.canAdd)
         .frame(maxWidth: .infinity)
     }
 }

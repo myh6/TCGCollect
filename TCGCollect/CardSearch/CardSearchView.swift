@@ -172,7 +172,7 @@ struct OnlineCardRow: View {
                         copies: copies,
                         range: AddToCollectionViewModel.copiesRange,
                         // The count saved, or being saved, stays as it is.
-                        isEnabled: addStatus == .notAdded || addStatus == .failed,
+                        isEnabled: addStatus.canAdd,
                         onIncrement: onIncrementCopies,
                         onDecrement: onDecrementCopies
                     )

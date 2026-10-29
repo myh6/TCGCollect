@@ -18,6 +18,8 @@ final class AddToCollectionViewModel {
         case adding
         case added
         case failed
+
+        var canAdd: Bool { self == .notAdded || self == .failed }
     }
 
     /// How many copies can be added at once. Kept to one digit for the tile's layout, not a limit on how many
@@ -51,14 +53,14 @@ final class AddToCollectionViewModel {
 
     /// Does nothing while the card is being added or once it's added, so the count shown stays the one saved.
     private func setCopies(_ count: Int, for cardID: Card.ID) {
-        guard status(for: cardID) != .adding, status(for: cardID) != .added else { return }
+        guard status(for: cardID).canAdd else { return }
         copies[cardID] = min(max(count, Self.copiesRange.lowerBound), Self.copiesRange.upperBound)
     }
 
     /// Saves the chosen number of copies in one save, so either all of them are added or none.
     /// Does nothing while the card is being added or once it's added, so a second tap can't add them twice.
     func add(_ card: Card) async {
-        guard status(for: card.id) != .adding, status(for: card.id) != .added else { return }
+        guard status(for: card.id).canAdd else { return }
 
         statuses[card.id] = .adding
         do {

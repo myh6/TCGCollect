@@ -199,6 +199,16 @@ struct AddToCollectionViewModelTests {
         #expect(sut.status(for: 1) == .added)
     }
 
+    @Test(arguments: [
+        (AddToCollectionViewModel.Status.notAdded, true),
+        (.adding, false),
+        (.added, false),
+        (.failed, true),
+    ])
+    func status_canAddOnlyWhenNotAddedOrFailed(status: AddToCollectionViewModel.Status, canAdd: Bool) {
+        #expect(status.canAdd == canAdd)
+    }
+
     // MARK: - Helpers
     private func makeSUT() -> (sut: AddToCollectionViewModel, saver: SaverSpy) {
         let saver = SaverSpy()
