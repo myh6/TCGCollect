@@ -43,6 +43,15 @@ struct PriceHistoryResponseMapperTests {
         ])
     }
 
+    @Test func map_readsTimesWithFractionsOfASecond() throws {
+        let row = makeRow(cardID: 7, price: "4.84", fetchedAt: "2026-01-01T00:00:00.399929+00:00")
+
+        let points = try map([row])
+
+        let date = try #require(points.first?.date)
+        #expect(abs(date.timeIntervalSince1970 - 1_767_225_600.399929) < 0.001)
+    }
+
     @Test(arguments: [
         ("market_price", nil),
         ("currency", nil),
