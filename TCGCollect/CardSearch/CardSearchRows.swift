@@ -27,11 +27,13 @@ struct OnlineCardRow: View {
 
     var body: some View {
         VStack(alignment: .trailing, spacing: 8) {
-            CardRow(name: card.name, details: card.details, imageURL: card.imageURL) {
-                Text(card.price)
-                    .font(.subheadline.monospacedDigit())
+            NavigationLink(value: card.card) {
+                CardRow(name: card.name, details: card.details, imageURL: card.imageURL) {
+                    Text(card.price)
+                        .font(.subheadline.monospacedDigit())
+                }
             }
-            // Apart from the row's details, so VoiceOver reads them as their own controls.
+            .buttonStyle(.plain)
             if let addControls {
                 HStack(spacing: 12) {
                     CopiesStepper(

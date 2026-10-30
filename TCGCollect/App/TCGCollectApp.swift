@@ -66,6 +66,7 @@ struct TCGCollectApp: App {
                             onlineCards: onlineCardsSearch,
                             makeAddToCollection: makeSearchAddToCollection
                         )
+                        .navigationDestination(for: Card.self, destination: cardDetail)
                     }
                 }
             }

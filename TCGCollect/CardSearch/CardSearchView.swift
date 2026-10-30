@@ -53,7 +53,11 @@ struct CardSearchView: View {
         if scope.showsOwned, let ownedCards, ownedCards.state != .idle {
             Section {
                 SearchResults(state: ownedCards.state, noResultsMessage: "None of your cards match.") { groups in
-                    ForEach(groups.map(OwnedCardGroupPresentation.init)) { OwnedCardGroupRow(card: $0) }
+                    ForEach(groups.map(OwnedCardGroupPresentation.init)) { group in
+                        NavigationLink(value: group.card) {
+                            OwnedCardGroupRow(card: group)
+                        }
+                    }
                 }
             } header: {
                 SearchSectionHeader(title: "Cards you own", isSearching: ownedCards.state.isSearching)
