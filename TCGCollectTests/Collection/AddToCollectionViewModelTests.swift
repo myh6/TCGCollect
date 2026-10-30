@@ -165,7 +165,7 @@ struct AddToCollectionViewModelTests {
         let card = makeCard(id: 1)
         let (sut, saver) = makeSUT()
         let firstAdding = await startAdding(card, to: sut, saver: saver)
-        saver.setCompletionForNewSaves(to: .success(()))
+        saver.setCompletionForNewCalls(to: .success(()))
 
         await sut.add(card)
         #expect(saver.saves.count == 1)
@@ -178,7 +178,7 @@ struct AddToCollectionViewModelTests {
         let card = makeCard(id: 1)
         let (sut, saver) = makeSUT()
         await add(card, to: sut, saver: saver, completingWith: .success(()))
-        saver.setCompletionForNewSaves(to: .success(()))
+        saver.setCompletionForNewCalls(to: .success(()))
 
         await sut.add(card)
 
@@ -241,7 +241,7 @@ struct AddToCollectionViewModelTests {
         let (sut, saver) = makeSUT()
 
         sut.controls(for: card).add()
-        await saver.waitForSave(at: 0)
+        await saver.waitForCall(at: 0)
 
         #expect(saver.saves.map { $0.map(\.card) } == [[card]])
         saver.complete(with: .success(()))
@@ -268,7 +268,7 @@ struct AddToCollectionViewModelTests {
         sourceLocation: SourceLocation = #_sourceLocation
     ) async -> Task<Void, Never> {
         let adding = Task { await sut.add(card) }
-        await saver.waitForSave(at: index, sourceLocation: sourceLocation)
+        await saver.waitForCall(at: index, sourceLocation: sourceLocation)
         return adding
     }
 
@@ -281,43 +281,15 @@ struct AddToCollectionViewModelTests {
         await adding.value
     }
 
-    /// Holds every `save` call until the test completes it, so tests can look at the in-between state.
-    @MainActor
-    private final class SaverSpy: OwnedCardSaver {
-        private(set) var saves = [[OwnedCard]]()
-        // nil once completed, so no save is resumed twice.
-        private var completions = [CheckedContinuation<Void, Error>?]()
-        private var resultForNewSaves: Result<Void, Error>?
-        private let arrivals = CallArrivals(callName: "save")
+    private final class SaverSpy: HeldCalls<[OwnedCard], Void>, OwnedCardSaver {
+        var saves: [[OwnedCard]] { inputs }
+
+        init() {
+            super.init(callName: "save")
+        }
 
         func save(_ ownedCards: [OwnedCard]) async throws {
-            saves.append(ownedCards)
-            arrivals.record()
-            if let resultForNewSaves {
-                completions.append(nil)
-                return try resultForNewSaves.get()
-            }
-            try await withCheckedThrowingContinuation { completions.append($0) }
-        }
-
-        func waitForSave(at index: Int, sourceLocation: SourceLocation = #_sourceLocation) async {
-            await arrivals.waitForCall(at: index, sourceLocation: sourceLocation)
-        }
-
-        /// Saves that arrive from now on complete right away, so an add that should be ignored
-        /// but reaches the saver anyway shows up in `saves` instead of leaving the test waiting.
-        /// Saves already waiting stay held until `complete(with:at:)`.
-        func setCompletionForNewSaves(to result: Result<Void, Error>) {
-            resultForNewSaves = result
-        }
-
-        func complete(with result: Result<Void, Error>, at index: Int = 0) {
-            guard completions.indices.contains(index), let completion = completions[index] else {
-                Issue.record("No waiting save at index \(index) to complete")
-                return
-            }
-            completions[index] = nil
-            completion.resume(with: result)
+            try await call(with: ownedCards)
         }
     }
 }

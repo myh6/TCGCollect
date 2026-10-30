@@ -69,7 +69,7 @@ struct CardDetailViewModelTests {
     @Test func loadDetails_ignoresLoadWhileLoading() async {
         let (sut, loader) = makeSUT()
         let firstLoading = await startLoadingDetails(sut, loader: loader)
-        loader.setCompletionForNewRequests(to: .success(nil))
+        loader.setCompletionForNewCalls(to: .success(nil))
 
         await sut.loadDetails()
         #expect(loader.requestedCardIDs.count == 1)
@@ -81,7 +81,7 @@ struct CardDetailViewModelTests {
     @Test func loadDetails_doesNotReloadLoadedDetails() async {
         let (sut, loader) = makeSUT()
         await loadDetails(sut, loader: loader, completingWith: .success(nil))
-        loader.setCompletionForNewRequests(to: .success(nil))
+        loader.setCompletionForNewCalls(to: .success(nil))
 
         await sut.loadDetails()
 
@@ -92,7 +92,7 @@ struct CardDetailViewModelTests {
         let details = GameDetails.onePiece(OnePieceDetails(category: .event, colors: [.red]))
         let (sut, loader) = makeSUT()
         await loadDetails(sut, loader: loader, completingWith: .failure(anyError()))
-        loader.setCompletionForNewRequests(to: .success(details))
+        loader.setCompletionForNewCalls(to: .success(details))
 
         await sut.loadDetails()
 
@@ -116,7 +116,7 @@ struct CardDetailViewModelTests {
         sourceLocation: SourceLocation = #_sourceLocation
     ) async -> Task<Void, Never> {
         let loading = Task { await sut.loadDetails() }
-        await loader.waitForRequest(at: 0, sourceLocation: sourceLocation)
+        await loader.waitForCall(at: 0, sourceLocation: sourceLocation)
         return loading
     }
 
@@ -129,38 +129,15 @@ struct CardDetailViewModelTests {
         await loading.value
     }
 
-    @MainActor
-    private final class DetailsLoaderSpy: CardDetailsLoader {
-        private(set) var requestedCardIDs = [Card.ID]()
-        private var completions = [CheckedContinuation<GameDetails?, Error>?]()
-        private var resultForNewRequests: Result<GameDetails?, Error>?
-        private let arrivals = CallArrivals(callName: "loadDetails")
+    private final class DetailsLoaderSpy: HeldCalls<Card.ID, GameDetails?>, CardDetailsLoader {
+        var requestedCardIDs: [Card.ID] { inputs }
+
+        init() {
+            super.init(callName: "loadDetails")
+        }
 
         func loadDetails(for cardID: Card.ID) async throws -> GameDetails? {
-            requestedCardIDs.append(cardID)
-            arrivals.record()
-            if let resultForNewRequests {
-                completions.append(nil)
-                return try resultForNewRequests.get()
-            }
-            return try await withCheckedThrowingContinuation { completions.append($0) }
-        }
-
-        func waitForRequest(at index: Int, sourceLocation: SourceLocation = #_sourceLocation) async {
-            await arrivals.waitForCall(at: index, sourceLocation: sourceLocation)
-        }
-
-        func setCompletionForNewRequests(to result: Result<GameDetails?, Error>) {
-            resultForNewRequests = result
-        }
-
-        func complete(with result: Result<GameDetails?, Error>, at index: Int = 0) {
-            guard completions.indices.contains(index), let completion = completions[index] else {
-                Issue.record("No waiting request at index \(index) to complete")
-                return
-            }
-            completions[index] = nil
-            completion.resume(with: result)
+            try await call(with: cardID)
         }
     }
 }

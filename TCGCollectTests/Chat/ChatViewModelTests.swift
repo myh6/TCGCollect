@@ -8,7 +8,6 @@
 import Foundation
 import Testing
 import AppCore
-import os
 @testable import TCGCollect
 
 // The loader spy holds requests until a test completes them, so a bug could leave one waiting forever.
@@ -41,7 +40,7 @@ struct ChatViewModelTests {
     @Test(arguments: ["", "   ", "\n"])
     func send_ignoresEmptyQuestion(question: String) async {
         let (sut, loader) = makeSUT()
-        loader.setCompletionForNewRequests(to: .success(makeAnswer("an answer")))
+        loader.setCompletionForNewCalls(to: .success(makeAnswer("an answer")))
 
         await sut.send(question)
 
@@ -90,7 +89,7 @@ struct ChatViewModelTests {
     @Test func send_ignoresSendWhileLoading() async {
         let (sut, loader) = makeSUT()
         let firstSending = await startSending(to: sut, loader: loader)
-        loader.setCompletionForNewRequests(to: .success(makeAnswer("an answer")))
+        loader.setCompletionForNewCalls(to: .success(makeAnswer("an answer")))
 
         await sut.send("another question")
         #expect(loader.questions == ["a question"])
@@ -104,7 +103,7 @@ struct ChatViewModelTests {
 
         sut.cancel()
 
-        #expect(loader.cancelledRequests.isEmpty)
+        #expect(loader.cancelledCalls.isEmpty)
         #expect(sut.state == .idle)
     }
 
@@ -113,7 +112,7 @@ struct ChatViewModelTests {
         let sending = await startSending(to: sut, loader: loader)
 
         sut.cancel()
-        #expect(loader.cancelledRequests == [0])
+        #expect(loader.cancelledCalls == [0])
 
         loader.complete(with: .failure(URLError(.cancelled)))
         await sending.value
@@ -168,7 +167,7 @@ struct ChatViewModelTests {
         sourceLocation: SourceLocation = #_sourceLocation
     ) async -> Task<Void, Never> {
         let sending = Task { await sut.send(question) }
-        await loader.waitForRequest(at: index, sourceLocation: sourceLocation)
+        await loader.waitForCall(at: index, sourceLocation: sourceLocation)
         return sending
     }
 
@@ -185,55 +184,15 @@ struct ChatViewModelTests {
         NSError(domain: "any error", code: 0)
     }
 
-    /// Holds every `load` call until the test completes it, so tests can look at the in-between state.
-    @MainActor
-    private final class LoaderSpy: ChatLoader {
-        private(set) var questions = [String]()
-        // nil once completed, so no request is resumed twice.
-        private var completions = [CheckedContinuation<ChatAnswer, Error>?]()
-        private var resultForNewRequests: Result<ChatAnswer, Error>?
-        private let arrivals = CallArrivals(callName: "request")
-        // Cancellation handlers can run on any thread, so they write through a lock.
-        private let cancelled = OSAllocatedUnfairLock(initialState: [Int]())
+    private final class LoaderSpy: HeldCalls<String, ChatAnswer>, ChatLoader {
+        var questions: [String] { inputs }
 
-        /// Indices of the requests whose task was cancelled while waiting.
-        var cancelledRequests: [Int] { cancelled.withLock { $0 } }
+        init() {
+            super.init(callName: "request")
+        }
 
         func load(question: String) async throws -> ChatAnswer {
-            questions.append(question)
-            arrivals.record()
-            if let resultForNewRequests {
-                completions.append(nil)
-                return try resultForNewRequests.get()
-            }
-            let index = questions.count - 1
-            let cancelled = cancelled
-            // Like URLSession, notice cancellation, but leave it to the test to say how the request ends.
-            return try await withTaskCancellationHandler {
-                try await withCheckedThrowingContinuation { completions.append($0) }
-            } onCancel: {
-                cancelled.withLock { $0.append(index) }
-            }
-        }
-
-        func complete(with result: Result<ChatAnswer, Error>, at index: Int = 0) {
-            guard completions.indices.contains(index), let completion = completions[index] else {
-                Issue.record("No waiting request at index \(index) to complete")
-                return
-            }
-            completions[index] = nil
-            completion.resume(with: result)
-        }
-
-        func waitForRequest(at index: Int, sourceLocation: SourceLocation = #_sourceLocation) async {
-            await arrivals.waitForCall(at: index, sourceLocation: sourceLocation)
-        }
-
-        /// Requests that arrive from now on complete right away, so a send that should be ignored
-        /// but reaches the loader anyway shows up in `questions` instead of leaving the test waiting.
-        /// Requests already waiting stay held until `complete(with:at:)`.
-        func setCompletionForNewRequests(to result: Result<ChatAnswer, Error>) {
-            resultForNewRequests = result
+            try await call(with: question)
         }
     }
 }

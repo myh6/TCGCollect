@@ -25,7 +25,7 @@ struct SearchSectionViewModelTests {
     @Test(arguments: ["", "L", "  L  ", "   "])
     func search_doesNotSearchQueryShorterThanTwoCharacters(query: String) async {
         let (sut, spy) = makeSUT()
-        spy.setCompletionForNewSearches(to: .success([]))
+        spy.setCompletionForNewCalls(to: .success([]))
 
         await sut.search(query)
 
@@ -116,7 +116,7 @@ struct SearchSectionViewModelTests {
 
     @Test func refresh_doesNotSearchBeforeAnySearch() async {
         let (sut, spy) = makeSUT()
-        spy.setCompletionForNewSearches(to: .success([]))
+        spy.setCompletionForNewCalls(to: .success([]))
 
         await sut.refresh()
 
@@ -127,7 +127,7 @@ struct SearchSectionViewModelTests {
     @Test func refresh_searchesLastQueryAgain() async {
         let (sut, spy) = makeSUT()
         await search(sut, for: "  luffy ", spy: spy, completingWith: .success(["Luffy"]))
-        spy.setCompletionForNewSearches(to: .success(["Luffy", "Luffy Leader"]))
+        spy.setCompletionForNewCalls(to: .success(["Luffy", "Luffy Leader"]))
 
         await sut.refresh()
 
@@ -139,7 +139,7 @@ struct SearchSectionViewModelTests {
         let (sut, spy) = makeSUT()
         await search(sut, for: "luffy", spy: spy, completingWith: .success(["Luffy"]))
         await sut.search("")
-        spy.setCompletionForNewSearches(to: .success(["Luffy"]))
+        spy.setCompletionForNewCalls(to: .success(["Luffy"]))
 
         await sut.refresh()
 
@@ -164,7 +164,7 @@ struct SearchSectionViewModelTests {
         sourceLocation: SourceLocation = #_sourceLocation
     ) async -> Task<Void, Never> {
         let searching = Task { await sut.search(query) }
-        await spy.waitForSearch(at: index, sourceLocation: sourceLocation)
+        await spy.waitForCall(at: index, sourceLocation: sourceLocation)
         return searching
     }
 
@@ -178,42 +178,15 @@ struct SearchSectionViewModelTests {
         await searching.value
     }
 
-    /// Holds every search until the test completes it, so tests can look at the in-between state.
-    @MainActor
-    private final class SearchSpy {
-        private(set) var queries = [String]()
-        // nil once completed, so no search is resumed twice.
-        private var completions = [CheckedContinuation<[String], Error>?]()
-        private var resultForNewSearches: Result<[String], Error>?
-        private let arrivals = CallArrivals(callName: "search")
+    private final class SearchSpy: HeldCalls<String, [String]> {
+        var queries: [String] { inputs }
+
+        init() {
+            super.init(callName: "search")
+        }
 
         func search(_ query: String) async throws -> [String] {
-            queries.append(query)
-            arrivals.record()
-            if let resultForNewSearches {
-                completions.append(nil)
-                return try resultForNewSearches.get()
-            }
-            return try await withCheckedThrowingContinuation { completions.append($0) }
-        }
-
-        func waitForSearch(at index: Int, sourceLocation: SourceLocation = #_sourceLocation) async {
-            await arrivals.waitForCall(at: index, sourceLocation: sourceLocation)
-        }
-
-        /// Searches that arrive from now on complete right away, so a search that should be skipped
-        /// but reaches the spy anyway shows up in `queries` instead of leaving the test waiting.
-        func setCompletionForNewSearches(to result: Result<[String], Error>) {
-            resultForNewSearches = result
-        }
-
-        func complete(with result: Result<[String], Error>, at index: Int = 0) {
-            guard completions.indices.contains(index), let completion = completions[index] else {
-                Issue.record("No waiting search at index \(index) to complete")
-                return
-            }
-            completions[index] = nil
-            completion.resume(with: result)
+            try await call(with: query)
         }
     }
 }
