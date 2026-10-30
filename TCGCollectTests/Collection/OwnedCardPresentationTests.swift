@@ -22,6 +22,14 @@ struct OwnedCardPresentationTests {
         #expect(sut.imageURL == imageURL)
     }
 
+    @Test func init_keepsCardToOpen() {
+        let card = Card(id: 7, name: "Roronoa Zoro", number: "OP01-025", printing: "Foil")
+
+        let sut = OwnedCardPresentation(OwnedCard(card: card))
+
+        #expect(sut.card == card)
+    }
+
     // Two copies of the same card are two tiles, so each needs its own id.
     @Test func init_usesOwnedCardIDNotCardID() {
         let card = Card(id: 7, name: "Roronoa Zoro")
