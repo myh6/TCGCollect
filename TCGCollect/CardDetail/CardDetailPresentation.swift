@@ -17,6 +17,7 @@ nonisolated struct CardDetailPresentation: Identifiable, Hashable {
     let printing: String?
     let imageURL: URL?
     let holoStyle: HoloStyle
+    let card: Card
 
     init(_ card: Card) {
         id = card.id
@@ -26,5 +27,6 @@ nonisolated struct CardDetailPresentation: Identifiable, Hashable {
         printing = card.printing
         imageURL = card.imageURL
         holoStyle = card.holoStyle
+        self.card = card
     }
 }

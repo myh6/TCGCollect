@@ -25,6 +25,12 @@ struct CardDetailPresentationTests {
         #expect(sut.imageURL == imageURL)
     }
 
+    @Test func init_keepsCardToAdd() {
+        let card = Card(id: 7, name: "Roronoa Zoro", number: "OP01-025", printing: "Foil")
+
+        #expect(CardDetailPresentation(card).card == card)
+    }
+
     @Test func init_usesNumberAndRarityAsDetails() {
         let sut = CardDetailPresentation(Card(id: 1, name: "a card", number: "OP01-001", rarity: "L"))
 

@@ -84,7 +84,12 @@ struct TCGCollectApp: App {
     }
 
     private func cardDetail(for card: Card) -> some View {
-        CardDetailScreen(card: card, loader: cardDetailsLoader, priceHistoryLoader: cardPriceHistoryLoader)
+        CardDetailScreen(
+            card: card,
+            loader: cardDetailsLoader,
+            priceHistoryLoader: cardPriceHistoryLoader,
+            ownership: ownedCardCollection.map { CardDetailUIComposer.makeOwnership(of: card.id, in: $0) }
+        )
     }
 
     private var makeSearchAddToCollection: (() -> AddToCollectionViewModel)? {

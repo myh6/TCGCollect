@@ -12,10 +12,11 @@ import HoloCard
 struct CardDetailView: View {
     let viewModel: CardDetailViewModel
     let priceViewModel: CardPriceViewModel
+    let ownership: CardDetailUIComposer.Ownership?
 
     var body: some View {
         ScrollView {
-            CardDetailContent(viewModel: viewModel, priceViewModel: priceViewModel)
+            CardDetailContent(viewModel: viewModel, priceViewModel: priceViewModel, ownership: ownership)
                 .padding()
                 .frame(maxWidth: 600)
                 .frame(maxWidth: .infinity)
@@ -24,12 +25,14 @@ struct CardDetailView: View {
         .toolbarTitleDisplayMode(.inline)
         .task { await viewModel.loadDetails() }
         .task { await priceViewModel.load() }
+        .task { await ownership?.copies.load() }
     }
 }
 
 struct CardDetailContent: View {
     let viewModel: CardDetailViewModel
     let priceViewModel: CardPriceViewModel
+    let ownership: CardDetailUIComposer.Ownership?
 
     private var card: CardDetailPresentation { viewModel.card }
 
@@ -38,6 +41,9 @@ struct CardDetailContent: View {
             holoCard
             header
             CardPriceSection(viewModel: priceViewModel)
+            if let ownership {
+                CardOwnershipSection(copies: ownership.copies, addControls: ownership.addToCollection.controls(for: viewModel.card.card))
+            }
             detailsSection
         }
     }
@@ -263,6 +269,22 @@ private nonisolated struct PreviewPriceHistoryLoader: CardPriceHistoryLoader {
     }
 }
 
+private final class PreviewCollection: OwnedCardLoader, OwnedCardSaver {
+    private var ownedCards: [OwnedCard]
+
+    init(cards: [Card]) {
+        ownedCards = cards.map { OwnedCard(card: $0) }
+    }
+
+    func load() async throws -> [OwnedCard] {
+        ownedCards
+    }
+
+    func save(_ newCards: [OwnedCard]) async throws {
+        ownedCards += newCards
+    }
+}
+
 private let previewCard = Card(
     id: 675180,
     name: "Uta",
@@ -308,7 +330,8 @@ private func detailView(_ card: Card, details: Result<GameDetails?, Error>?) -> 
     NavigationStack {
         CardDetailView(
             viewModel: CardDetailViewModel(card: card, loader: PreviewDetailsLoader(result: details)),
-            priceViewModel: CardPriceViewModel(cardID: card.id, loader: PreviewPriceHistoryLoader())
+            priceViewModel: CardPriceViewModel(cardID: card.id, loader: PreviewPriceHistoryLoader()),
+            ownership: CardDetailUIComposer.makeOwnership(of: card.id, in: PreviewCollection(cards: [card, card]))
         )
     }
 }
