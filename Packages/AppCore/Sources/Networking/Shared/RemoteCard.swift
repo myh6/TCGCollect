@@ -39,10 +39,6 @@ struct RemoteCard: Decodable {
 
     /// nil when any price value is missing or can't be read.
     var price: PricePoint? {
-        guard let current_price, let currency, let current_fetched_at,
-              // A string, so it converts to Decimal exactly; a JSON number would go through Double first.
-              let amount = Decimal(string: current_price, locale: Locale(identifier: "en_US_POSIX")),
-              let date = ISO8601DateFormatter().date(from: current_fetched_at) else { return nil }
-        return PricePoint(cardID: card_id, date: date, price: Money(amount: amount, currencyCode: currency))
+        RemotePricePoint.make(cardID: card_id, amount: current_price, currency: currency, fetchedAt: current_fetched_at)
     }
 }
