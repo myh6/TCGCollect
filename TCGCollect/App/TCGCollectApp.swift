@@ -44,6 +44,7 @@ struct TCGCollectApp: App {
                     NavigationStack {
                         if let chatViewModel {
                             ChatView(viewModel: chatViewModel, addToCollection: addToCollectionViewModel)
+                                .navigationDestination(for: Card.self, destination: cardDetail)
                         } else {
                             ChatUnavailableView()
                         }

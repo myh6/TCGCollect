@@ -41,7 +41,10 @@ struct SuggestedCardTile: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            details
+            NavigationLink(value: card.card) {
+                details
+            }
+            .buttonStyle(.plain)
             if let addControls {
                 CopiesStepper(
                     copies: addControls.copies,
