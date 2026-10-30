@@ -53,7 +53,10 @@ struct OwnedCardsGrid: View {
         ScrollView {
             LazyVGrid(columns: columns, spacing: 16) {
                 ForEach(cards) { card in
-                    OwnedCardTile(card: card)
+                    NavigationLink(value: card.card) {
+                        OwnedCardTile(card: card)
+                    }
+                    .buttonStyle(.plain)
                 }
             }
             .padding()
