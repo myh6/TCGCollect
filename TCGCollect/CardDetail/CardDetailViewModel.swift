@@ -12,15 +12,8 @@ import AppCore
 @MainActor
 @Observable
 final class CardDetailViewModel {
-    enum DetailsState: Equatable {
-        case idle
-        case loading
-        case loaded(GameDetails?)
-        case failed
-    }
-
     let card: CardDetailPresentation
-    private(set) var details = DetailsState.idle
+    private(set) var details = LoadingState<GameDetails?>.idle
 
     private let cardID: Card.ID
     private let loader: CardDetailsLoader
