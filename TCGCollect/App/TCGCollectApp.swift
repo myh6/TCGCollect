@@ -25,6 +25,7 @@ struct TCGCollectApp: App {
     @State private var ownedCardsSearch: SearchSectionViewModel<OwnedCardGroup>?
     @State private var onlineCardsSearch = Self.makeOnlineCardsSearch()
     private let cardDetailsLoader = Self.makeCardDetailsLoader()
+    private let backendWakeUp = Self.makeBackendWakeUp()
     private let cardPriceHistoryLoader = Self.makeCardPriceHistoryLoader()
 
     init() {
@@ -73,6 +74,7 @@ struct TCGCollectApp: App {
                 }
             }
             .environment(\.imageLoader, imageLoader)
+            .task { await backendWakeUp?.wakeUp() }
             #if DEBUG
             .task {
                 if SampleCards.isOn, let ownedCardCollection {
@@ -119,6 +121,11 @@ struct TCGCollectApp: App {
             Logger(subsystem: "TCGCollect", category: "Search").error("Online search unavailable: \(String(describing: error))")
             return nil
         }
+    }
+
+    private static func makeBackendWakeUp() -> BackendWakeUp? {
+        guard let configuration = try? BackendConfiguration(infoDictionary: Bundle.main.infoDictionary ?? [:]) else { return nil }
+        return BackendWakeUpComposer.makeBackendWakeUp(baseURL: configuration.baseURL, apiKey: configuration.apiKey)
     }
 
     /// Without a backend the page still shows the card, just without its details.
