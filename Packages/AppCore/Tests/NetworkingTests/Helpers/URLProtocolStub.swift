@@ -16,6 +16,8 @@ import os
 class URLProtocolStub: URLProtocol {
     private struct State: Sendable {
         var data = Data()
+        var statusCodes = [Int]()
+        var error: URLError?
         var requests = [URLRequest]()
         var bodies = [Data?]()
     }
@@ -38,8 +40,15 @@ class URLProtocolStub: URLProtocol {
     }
 
     /// Clears what this subclass recorded and returns a session whose requests it answers with `data`.
-    class func makeSession(replyingWith data: Data) -> URLSession {
-        states.withLock { $0[ObjectIdentifier(self)] = State(data: data) }
+    class func makeSession(replyingWith data: Data, statusCodes: [Int] = []) -> URLSession {
+        states.withLock { $0[ObjectIdentifier(self)] = State(data: data, statusCodes: statusCodes) }
+        let configuration = URLSessionConfiguration.ephemeral
+        configuration.protocolClasses = [self]
+        return URLSession(configuration: configuration)
+    }
+
+    class func makeSession(failingWith error: URLError) -> URLSession {
+        states.withLock { $0[ObjectIdentifier(self)] = State(error: error) }
         let configuration = URLSessionConfiguration.ephemeral
         configuration.protocolClasses = [self]
         return URLSession(configuration: configuration)
@@ -53,12 +62,20 @@ class URLProtocolStub: URLProtocol {
         let request = request
         let body = request.httpBody ?? request.httpBodyStream.map(Self.readAll)
         let key = ObjectIdentifier(type(of: self))
-        let data = Self.states.withLock { states in
+        let (data, statusCode, error) = Self.states.withLock { states in
             states[key, default: State()].requests.append(request)
             states[key, default: State()].bodies.append(body)
-            return states[key, default: State()].data
+            let statusCodes = states[key, default: State()].statusCodes
+            if statusCodes.count > 1 {
+                states[key, default: State()].statusCodes.removeFirst()
+            }
+            return (states[key, default: State()].data, statusCodes.first ?? 200, states[key, default: State()].error)
         }
-        let response = HTTPURLResponse(url: request.url!, statusCode: 200, httpVersion: nil, headerFields: nil)!
+        if let error {
+            client?.urlProtocol(self, didFailWithError: error)
+            return
+        }
+        let response = HTTPURLResponse(url: request.url!, statusCode: statusCode, httpVersion: nil, headerFields: nil)!
         client?.urlProtocol(self, didReceive: response, cacheStoragePolicy: .notAllowed)
         client?.urlProtocol(self, didLoad: data)
         client?.urlProtocolDidFinishLoading(self)
