@@ -17,6 +17,7 @@ nonisolated struct OnlineCardPresentation: Identifiable, Equatable {
     /// The current price, or "No price" when the backend has none yet.
     let price: String
     let imageURL: URL?
+    let card: Card
 
     init(_ result: CardSearchResult, locale: Locale = .current) {
         let card = result.card
@@ -27,5 +28,6 @@ nonisolated struct OnlineCardPresentation: Identifiable, Equatable {
             pricePoint.price.amount.formatted(.currency(code: pricePoint.price.currencyCode).locale(locale))
         } ?? String(localized: "No price")
         imageURL = card.imageURL
+        self.card = card
     }
 }
