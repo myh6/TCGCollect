@@ -44,7 +44,8 @@ struct CardDetailContent: View {
                 .aspectRatio(63.0 / 88.0, contentMode: .fit)
         }
         .frame(maxWidth: 280)
-        .padding(.vertical, 12)
+        .padding(.top, 36)
+        .padding(.bottom, 12)
     }
 
     private var header: some View {
