@@ -24,9 +24,7 @@ nonisolated struct OnlineCardPresentation: Identifiable, Equatable {
         id = card.id
         name = card.name
         details = card.numberAndRarity
-        price = result.price.map { pricePoint in
-            pricePoint.price.amount.formatted(.currency(code: pricePoint.price.currencyCode).locale(locale))
-        } ?? String(localized: "No price")
+        price = result.price?.price.formatted(locale: locale) ?? String(localized: "No price")
         imageURL = card.imageURL
         self.card = card
     }

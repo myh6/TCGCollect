@@ -24,7 +24,7 @@ nonisolated struct SuggestedCardPresentation: Identifiable, Equatable {
         id = card.id
         name = card.name
         details = card.numberAndRarity
-        self.price = price.amount.formatted(.currency(code: price.currencyCode).locale(locale))
+        self.price = price.formatted(locale: locale)
         imageURL = card.imageURL
         self.card = card
     }
