@@ -25,6 +25,7 @@ struct TCGCollectApp: App {
     @State private var ownedCardsSearch: SearchSectionViewModel<OwnedCardGroup>?
     @State private var onlineCardsSearch = Self.makeOnlineCardsSearch()
     private let cardDetailsLoader = Self.makeCardDetailsLoader()
+    private let cardPriceHistoryLoader = Self.makeCardPriceHistoryLoader()
 
     init() {
         // Both from the same collection, so the app never opens the store twice.
@@ -83,7 +84,12 @@ struct TCGCollectApp: App {
     }
 
     private func cardDetail(for card: Card) -> some View {
-        CardDetailScreen(card: card, loader: cardDetailsLoader)
+        CardDetailScreen(
+            card: card,
+            loader: cardDetailsLoader,
+            priceHistoryLoader: cardPriceHistoryLoader,
+            ownership: ownedCardCollection.map { CardDetailUIComposer.makeOwnership(of: card.id, in: $0) }
+        )
     }
 
     private var makeSearchAddToCollection: (() -> AddToCollectionViewModel)? {
@@ -129,6 +135,17 @@ struct TCGCollectApp: App {
         }
     }
 
+    /// Without a backend the page shows no price history.
+    private static func makeCardPriceHistoryLoader() -> CardPriceHistoryLoader {
+        do {
+            let configuration = try BackendConfiguration(infoDictionary: Bundle.main.infoDictionary ?? [:])
+            return PriceHistoryComposer.makeRemoteCardPriceHistoryLoader(baseURL: configuration.baseURL, apiKey: configuration.apiKey)
+        } catch {
+            Logger(subsystem: "TCGCollect", category: "CardDetail").error("Price history unavailable: \(String(describing: error))")
+            return NoCardPriceHistoryLoader()
+        }
+    }
+
     /// Memory first, then the disk cache, then the network; downloads are saved to disk for next time.
     private static func makeImageLoader() -> ImageLoader {
         let cacheDirectory = URL.cachesDirectory.appending(path: "CardImages", directoryHint: .isDirectory)
@@ -149,6 +166,12 @@ struct TCGCollectApp: App {
             Logger(subsystem: "TCGCollect", category: "Collection").error("Collection unavailable: \(String(describing: error))")
             return nil
         }
+    }
+}
+
+private struct NoCardPriceHistoryLoader: CardPriceHistoryLoader {
+    func loadPriceHistory(for cardIDs: [Card.ID], days: Int?) async throws -> [PricePoint] {
+        []
     }
 }
 

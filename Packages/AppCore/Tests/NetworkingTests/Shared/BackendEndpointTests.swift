@@ -53,6 +53,8 @@ struct BackendEndpointTests {
         Endpoint(path: "v1/ask") { try ChatEndpoint.sendMessage("any message").urlRequest(baseURL: $0) },
         Endpoint(path: "v1/search") { try CardSearchEndpoint.search(query: "any query").urlRequest(baseURL: $0) },
         Endpoint(path: "v1/cards/details") { try CardDetailsEndpoint.details(cardID: 1).urlRequest(baseURL: $0) },
+        Endpoint(path: "v1/prices/current") { try CurrentPricesEndpoint.prices(cardIDs: [1]).urlRequest(baseURL: $0) },
+        Endpoint(path: "v1/prices/history") { try PriceHistoryEndpoint.history(cardIDs: [1], days: nil).urlRequest(baseURL: $0) },
     ]
 
     private func anyBaseURL() -> URL {
