@@ -11,10 +11,11 @@ import HoloCard
 
 struct CardDetailView: View {
     let viewModel: CardDetailViewModel
+    let priceViewModel: CardPriceViewModel
 
     var body: some View {
         ScrollView {
-            CardDetailContent(viewModel: viewModel)
+            CardDetailContent(viewModel: viewModel, priceViewModel: priceViewModel)
                 .padding()
                 .frame(maxWidth: 600)
                 .frame(maxWidth: .infinity)
@@ -22,11 +23,13 @@ struct CardDetailView: View {
         .navigationTitle(viewModel.card.name)
         .toolbarTitleDisplayMode(.inline)
         .task { await viewModel.loadDetails() }
+        .task { await priceViewModel.load() }
     }
 }
 
 struct CardDetailContent: View {
     let viewModel: CardDetailViewModel
+    let priceViewModel: CardPriceViewModel
 
     private var card: CardDetailPresentation { viewModel.card }
 
@@ -34,6 +37,7 @@ struct CardDetailContent: View {
         VStack(spacing: 24) {
             holoCard
             header
+            CardPriceSection(viewModel: priceViewModel)
             detailsSection
         }
     }
@@ -246,6 +250,19 @@ private nonisolated struct PreviewDetailsLoader: CardDetailsLoader {
     }
 }
 
+private nonisolated struct PreviewPriceHistoryLoader: CardPriceHistoryLoader {
+    func loadPriceHistory(for cardIDs: [Card.ID], days: Int?) async throws -> [PricePoint] {
+        let prices: [Decimal] = [4.43, 4.50, 4.48, 4.62, 4.70, 4.66, 4.84, 4.95, 4.90, 4.85]
+        return prices.enumerated().map { index, price in
+            PricePoint(
+                cardID: cardIDs[0],
+                date: Date.now.addingTimeInterval(TimeInterval(index - prices.count) * 3 * 86_400),
+                price: Money(amount: price, currencyCode: "USD")
+            )
+        }
+    }
+}
+
 private let previewCard = Card(
     id: 675180,
     name: "Uta",
@@ -289,7 +306,10 @@ private let previewShanksDetails = GameDetails.onePiece(OnePieceDetails(
 @MainActor
 private func detailView(_ card: Card, details: Result<GameDetails?, Error>?) -> some View {
     NavigationStack {
-        CardDetailView(viewModel: CardDetailViewModel(card: card, loader: PreviewDetailsLoader(result: details)))
+        CardDetailView(
+            viewModel: CardDetailViewModel(card: card, loader: PreviewDetailsLoader(result: details)),
+            priceViewModel: CardPriceViewModel(cardID: card.id, loader: PreviewPriceHistoryLoader())
+        )
     }
 }
 
