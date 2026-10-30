@@ -33,13 +33,13 @@
 		0F04964D307CFDDE00378952 /* TCGCollectTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = TCGCollectTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		0F049657307CFDDE00378952 /* TCGCollectUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = TCGCollectUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		0F0496FF307D0E9D00378952 /* AppCore */ = {isa = PBXFileReference; lastKnownFileType = wrapper; name = AppCore; path = Packages/AppCore; sourceTree = "<group>"; };
-		B8F1C2F46FC607DA48A8BAC4 /* HoloCard */ = {isa = PBXFileReference; lastKnownFileType = wrapper; name = HoloCard; path = Packages/HoloCard; sourceTree = "<group>"; };
 		0F5A73613080C60600B42482 /* Networking.xctestplan */ = {isa = PBXFileReference; lastKnownFileType = text; name = Networking.xctestplan; path = Packages/AppCore/Networking.xctestplan; sourceTree = "<group>"; };
 		0F5A739630889D9C00B42482 /* TCGCollect.xctestplan */ = {isa = PBXFileReference; lastKnownFileType = text; path = TCGCollect.xctestplan; sourceTree = "<group>"; };
 		0F5A73973088A1A600B42482 /* ci.sh */ = {isa = PBXFileReference; lastKnownFileType = text.script.sh; path = ci.sh; sourceTree = "<group>"; };
 		0F5A73BD308A895000B42482 /* AppCore.xctestplan */ = {isa = PBXFileReference; lastKnownFileType = text; name = AppCore.xctestplan; path = Packages/AppCore.xctestplan; sourceTree = "<group>"; };
 		0F5A7400308A000000B42482 /* Secrets.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Secrets.xcconfig; sourceTree = "<group>"; };
 		0F5A7401308A000000B42482 /* Secrets.example.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Secrets.example.xcconfig; sourceTree = "<group>"; };
+		B8F1C2F46FC607DA48A8BAC4 /* HoloCard */ = {isa = PBXFileReference; lastKnownFileType = wrapper; name = HoloCard; path = Packages/HoloCard; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */

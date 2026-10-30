@@ -32,6 +32,18 @@ public struct HoloTilt: Equatable, Sendable {
         }
         self.init(pointer: UnitPoint(x: location.x / size.width, y: location.y / size.height), maxAngle: maxAngle)
     }
+
+    public init(roll: Angle, pitch: Angle, range: Angle = .degrees(20), maxAngle: Angle = .degrees(15)) {
+        guard range.degrees > 0 else {
+            self.init(pointer: .center, maxAngle: maxAngle)
+            return
+        }
+        let pointer = UnitPoint(
+            x: 0.5 + roll.degrees / range.degrees / 2,
+            y: 0.5 - pitch.degrees / range.degrees / 2
+        )
+        self.init(pointer: pointer, maxAngle: maxAngle)
+    }
 }
 
 private extension Angle {

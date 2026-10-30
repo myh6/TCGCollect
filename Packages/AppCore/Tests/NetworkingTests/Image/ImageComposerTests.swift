@@ -23,6 +23,7 @@ struct ImageComposerTests {
 
         let requests = Stub.requests
         #expect(requests.map(\.url) == [url])
+        #expect(requests.map(\.httpMethod) == ["GET"])
         #expect(requests.map { $0.value(forHTTPHeaderField: "X-API-Key") } == [nil])
     }
 

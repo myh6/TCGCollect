@@ -23,6 +23,14 @@ struct OwnedCardGroupPresentationTests {
         #expect(sut.imageURL == imageURL)
     }
 
+    @Test func init_keepsCardToOpen() {
+        let card = Card(id: 7, name: "Roronoa Zoro", number: "OP01-025", printing: "Foil")
+
+        let sut = OwnedCardGroupPresentation(OwnedCardGroup(card: card, count: 2))
+
+        #expect(sut.card == card)
+    }
+
     @Test func init_usesNumberAndRarityAsDetails() {
         let group = OwnedCardGroup(card: Card(id: 1, name: "a card", number: "OP01-001", rarity: "L"), count: 1)
 

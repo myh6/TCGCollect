@@ -23,6 +23,14 @@ struct SuggestedCardPresentationTests {
         #expect(sut.imageURL == imageURL)
     }
 
+    @Test func init_keepsCardToOpen() {
+        let card = Card(id: 7, name: "Roronoa Zoro", number: "OP01-025", printing: "Foil")
+
+        let sut = SuggestedCardPresentation(makeSuggestion(card: card), locale: Locale(identifier: "en_US"))
+
+        #expect(sut.card == card)
+    }
+
     @Test(arguments: [
         ("OP01-001", "L", "OP01-001 · L"),
         ("OP01-001", nil, "OP01-001"),

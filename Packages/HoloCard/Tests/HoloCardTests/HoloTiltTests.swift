@@ -75,6 +75,49 @@ struct HoloTiltTests {
         #expect(sut == .resting)
     }
 
+    @Test func initWithMotion_restsWhilePhoneIsHeldAsAtStart() {
+        let sut = HoloTilt(roll: .zero, pitch: .zero)
+
+        #expect(sut == .resting)
+    }
+
+    @Test(arguments: [
+        (20.0, 0.0, UnitPoint.trailing),
+        (-20.0, 0.0, .leading),
+        (0.0, 20.0, .top),
+        (0.0, -20.0, .bottom),
+        (20.0, 20.0, .topTrailing),
+    ])
+    func initWithMotion_movesPointerTowardWhereThePhoneTurnsUpToRange(roll: Double, pitch: Double, pointer: UnitPoint) {
+        let sut = HoloTilt(roll: .degrees(roll), pitch: .degrees(pitch), range: .degrees(20))
+
+        #expect(sut.pointer == pointer)
+    }
+
+    @Test func initWithMotion_movesPointerInProportionToTurn() {
+        let sut = HoloTilt(roll: .degrees(10), pitch: .degrees(-5), range: .degrees(20))
+
+        #expect(sut.pointer == UnitPoint(x: 0.75, y: 0.625))
+    }
+
+    @Test func initWithMotion_keepsPointerOnCardBeyondRange() {
+        let sut = HoloTilt(roll: .degrees(90), pitch: .degrees(-90), range: .degrees(20))
+
+        #expect(sut.pointer == .bottomTrailing)
+    }
+
+    @Test func initWithMotion_restsWithoutRange() {
+        let sut = HoloTilt(roll: .degrees(10), pitch: .degrees(10), range: .zero)
+
+        #expect(sut == .resting)
+    }
+
+    @Test func initWithMotion_rotatesUpToMaxAngle() {
+        let sut = HoloTilt(roll: .degrees(20), pitch: .zero, range: .degrees(20), maxAngle: .degrees(8))
+
+        expectRotation(of: sut, x: 0, y: 8)
+    }
+
     // MARK: - Helpers
     private func expectRotation(
         of tilt: HoloTilt, x: Double, y: Double,

@@ -24,6 +24,7 @@ struct TCGCollectApp: App {
     // Owned here so the results stay on screen after switching tabs.
     @State private var ownedCardsSearch: SearchSectionViewModel<OwnedCardGroup>?
     @State private var onlineCardsSearch = Self.makeOnlineCardsSearch()
+    private let cardDetailsLoader = Self.makeCardDetailsLoader()
 
     init() {
         // Both from the same collection, so the app never opens the store twice.
@@ -43,6 +44,7 @@ struct TCGCollectApp: App {
                     NavigationStack {
                         if let chatViewModel {
                             ChatView(viewModel: chatViewModel, addToCollection: addToCollectionViewModel)
+                                .navigationDestination(for: Card.self, destination: cardDetail)
                         } else {
                             ChatUnavailableView()
                         }
@@ -52,6 +54,7 @@ struct TCGCollectApp: App {
                     NavigationStack {
                         if let collectionViewModel {
                             CollectionView(viewModel: collectionViewModel)
+                                .navigationDestination(for: Card.self, destination: cardDetail)
                         } else {
                             CollectionUnavailableView()
                         }
@@ -64,11 +67,23 @@ struct TCGCollectApp: App {
                             onlineCards: onlineCardsSearch,
                             makeAddToCollection: makeSearchAddToCollection
                         )
+                        .navigationDestination(for: Card.self, destination: cardDetail)
                     }
                 }
             }
             .environment(\.imageLoader, imageLoader)
+            #if DEBUG
+            .task {
+                if SampleCards.isOn, let ownedCardCollection {
+                    await SampleCards.addMissing(to: ownedCardCollection)
+                }
+            }
+            #endif
         }
+    }
+
+    private func cardDetail(for card: Card) -> some View {
+        CardDetailScreen(card: card, loader: cardDetailsLoader)
     }
 
     private var makeSearchAddToCollection: (() -> AddToCollectionViewModel)? {
@@ -100,6 +115,20 @@ struct TCGCollectApp: App {
         }
     }
 
+    /// Without a backend the page still shows the card, just without its details.
+    private static func makeCardDetailsLoader() -> CardDetailsLoader {
+        #if DEBUG
+        if SampleCards.isOn { return SampleCardDetailsLoader() }
+        #endif
+        do {
+            let configuration = try BackendConfiguration(infoDictionary: Bundle.main.infoDictionary ?? [:])
+            return CardDetailsComposer.makeRemoteCardDetailsLoader(baseURL: configuration.baseURL, apiKey: configuration.apiKey)
+        } catch {
+            Logger(subsystem: "TCGCollect", category: "CardDetail").error("Card details unavailable: \(String(describing: error))")
+            return NoCardDetailsLoader()
+        }
+    }
+
     /// Memory first, then the disk cache, then the network; downloads are saved to disk for next time.
     private static func makeImageLoader() -> ImageLoader {
         let cacheDirectory = URL.cachesDirectory.appending(path: "CardImages", directoryHint: .isDirectory)
@@ -120,5 +149,11 @@ struct TCGCollectApp: App {
             Logger(subsystem: "TCGCollect", category: "Collection").error("Collection unavailable: \(String(describing: error))")
             return nil
         }
+    }
+}
+
+private struct NoCardDetailsLoader: CardDetailsLoader {
+    func loadDetails(for cardID: Card.ID) async throws -> GameDetails? {
+        nil
     }
 }

@@ -17,6 +17,7 @@ nonisolated struct OwnedCardGroupPresentation: Identifiable, Equatable {
     /// How many copies the user owns, e.g. "×3".
     let copies: String
     let imageURL: URL?
+    let card: Card
 
     init(_ group: OwnedCardGroup) {
         id = group.card.id
@@ -24,5 +25,6 @@ nonisolated struct OwnedCardGroupPresentation: Identifiable, Equatable {
         details = group.card.numberAndRarity
         copies = "×\(group.count)"
         imageURL = group.card.imageURL
+        card = group.card
     }
 }

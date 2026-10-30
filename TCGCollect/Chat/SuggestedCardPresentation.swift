@@ -16,6 +16,7 @@ nonisolated struct SuggestedCardPresentation: Identifiable, Equatable {
     let details: String?
     let price: String
     let imageURL: URL?
+    let card: Card
 
     init(_ suggestion: ChatAnswer.Suggestion, locale: Locale = .current) {
         let card = suggestion.card
@@ -25,5 +26,6 @@ nonisolated struct SuggestedCardPresentation: Identifiable, Equatable {
         details = card.numberAndRarity
         self.price = price.amount.formatted(.currency(code: price.currencyCode).locale(locale))
         imageURL = card.imageURL
+        self.card = card
     }
 }

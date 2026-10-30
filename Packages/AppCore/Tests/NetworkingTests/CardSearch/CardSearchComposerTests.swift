@@ -23,6 +23,7 @@ struct CardSearchComposerTests {
         #expect(requests.map(\.url) == [URL(string: "http://base-url.com/v1/search")!])
         #expect(requests.map(\.httpMethod) == ["POST"])
         #expect(requests.map { $0.value(forHTTPHeaderField: "X-API-Key") } == ["an api key"])
+        #expect(Stub.requestJSONBodies == [["query": "luffy", "limit": 20]])
     }
 
     @Test func makeRemoteCardSearcher_deliversResultsFromBackend() async throws {

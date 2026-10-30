@@ -16,11 +16,13 @@ nonisolated struct OwnedCardPresentation: Identifiable, Equatable {
     /// The card number and rarity, e.g. "OP01-001 · L", or nil when the card has neither.
     let details: String?
     let imageURL: URL?
+    let card: Card
 
     init(_ ownedCard: OwnedCard) {
         id = ownedCard.id
         name = ownedCard.card.name
         details = ownedCard.card.numberAndRarity
         imageURL = ownedCard.card.imageURL
+        card = ownedCard.card
     }
 }

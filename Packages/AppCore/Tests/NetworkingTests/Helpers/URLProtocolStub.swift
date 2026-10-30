@@ -17,6 +17,7 @@ class URLProtocolStub: URLProtocol {
     private struct State: Sendable {
         var data = Data()
         var requests = [URLRequest]()
+        var bodies = [Data?]()
     }
 
     // Keyed by subclass.
@@ -25,6 +26,15 @@ class URLProtocolStub: URLProtocol {
     /// The requests this subclass has seen since its last `makeSession(replyingWith:)`.
     class var requests: [URLRequest] {
         states.withLock { $0[ObjectIdentifier(self)]?.requests ?? [] }
+    }
+
+    /// The bodies of those requests, read from their streams, since `URLProtocol` gets bodies as streams.
+    class var requestBodies: [Data?] {
+        states.withLock { $0[ObjectIdentifier(self)]?.bodies ?? [] }
+    }
+
+    class var requestJSONBodies: [NSDictionary?] {
+        requestBodies.map { body in body.flatMap { try? JSONSerialization.jsonObject(with: $0) as? NSDictionary } }
     }
 
     /// Clears what this subclass recorded and returns a session whose requests it answers with `data`.
@@ -41,9 +51,11 @@ class URLProtocolStub: URLProtocol {
 
     override func startLoading() {
         let request = request
+        let body = request.httpBody ?? request.httpBodyStream.map(Self.readAll)
         let key = ObjectIdentifier(type(of: self))
         let data = Self.states.withLock { states in
             states[key, default: State()].requests.append(request)
+            states[key, default: State()].bodies.append(body)
             return states[key, default: State()].data
         }
         let response = HTTPURLResponse(url: request.url!, statusCode: 200, httpVersion: nil, headerFields: nil)!
@@ -53,4 +65,17 @@ class URLProtocolStub: URLProtocol {
     }
 
     override func stopLoading() {}
+
+    private static func readAll(_ stream: InputStream) -> Data {
+        stream.open()
+        defer { stream.close() }
+        var data = Data()
+        var buffer = [UInt8](repeating: 0, count: 1024)
+        while stream.hasBytesAvailable {
+            let count = stream.read(&buffer, maxLength: buffer.count)
+            guard count > 0 else { break }
+            data.append(buffer, count: count)
+        }
+        return data
+    }
 }

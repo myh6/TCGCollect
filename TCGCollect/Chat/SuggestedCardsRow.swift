@@ -41,12 +41,14 @@ struct SuggestedCardTile: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            details
+            NavigationLink(value: card.card) {
+                details
+            }
+            .buttonStyle(.plain)
             if let addControls {
                 CopiesStepper(
                     copies: addControls.copies,
                     range: AddToCollectionViewModel.copiesRange,
-                    // The count saved, or being saved, stays as it is.
                     isEnabled: addControls.status.canAdd,
                     onIncrement: addControls.incrementCopies,
                     onDecrement: addControls.decrementCopies
@@ -57,7 +59,6 @@ struct SuggestedCardTile: View {
         .frame(width: Self.imageSize.width, alignment: .leading)
     }
 
-    // Read as one element by VoiceOver, apart from the button so it stays its own control.
     private var details: some View {
         VStack(alignment: .leading, spacing: 4) {
             CardImageView(url: card.imageURL)

@@ -23,6 +23,14 @@ struct OnlineCardPresentationTests {
         #expect(sut.imageURL == imageURL)
     }
 
+    @Test func init_keepsCardToOpen() {
+        let card = Card(id: 7, name: "Roronoa Zoro", number: "OP01-025", printing: "Foil")
+
+        let sut = OnlineCardPresentation(makeResult(card: card), locale: Locale(identifier: "en_US"))
+
+        #expect(sut.card == card)
+    }
+
     @Test func init_usesNumberAndRarityAsDetails() {
         let result = makeResult(card: Card(id: 1, name: "a card", number: "OP01-001", rarity: "L"))
 

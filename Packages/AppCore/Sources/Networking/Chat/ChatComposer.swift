@@ -11,7 +11,11 @@ import Foundation
 public enum ChatComposer {
     public static func makeRemoteChatLoader(baseURL: URL, apiKey: String, session: URLSession? = nil) -> ChatLoader {
         let client = BackendClient.make(apiKey: apiKey, session: session ?? makeSession())
-        return RemoteChatLoader(baseURL: baseURL, client: client)
+        return RemoteLoader(
+            client: client,
+            makeRequest: { question in try ChatEndpoint.sendMessage(question).urlRequest(baseURL: baseURL) },
+            map: ChatResponseMapper.map
+        )
     }
 
     private static func makeSession() -> URLSession {

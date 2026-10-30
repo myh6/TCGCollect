@@ -18,7 +18,6 @@ final class ManagedOwnedCard {
     var position: Int
 
     // A snapshot of the card when it was added, so the collection shows it without the network.
-    // `Card.details` isn't kept: the backend doesn't send any yet.
     var cardID: Int
     var name: String
     var number: String?
