@@ -18,8 +18,8 @@ nonisolated struct OnePieceDetailsPresentation: Equatable {
     let colors: [OnePieceDetails.Color]
     let colorNames: String?
     let stats: [Stat]
-    let attributes: String?
-    let types: String?
+    let attributes: [String]
+    let types: [String]
     let effect: String?
 
     init(_ details: OnePieceDetails, locale: Locale = .current) {
@@ -34,8 +34,8 @@ nonisolated struct OnePieceDetailsPresentation: Equatable {
         ].compactMap { label, value in
             value.map { Stat(label: label, value: $0.formatted(.number.locale(locale))) }
         }
-        attributes = Self.joined(details.attributes)
-        types = Self.joined(details.types)
+        attributes = details.attributes
+        types = details.types
         effect = details.effect
     }
 

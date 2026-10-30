@@ -111,7 +111,7 @@ struct OnePieceDetailsSection: View {
             if !details.stats.isEmpty {
                 stats
             }
-            if details.attributes != nil || details.types != nil {
+            if !details.attributes.isEmpty || !details.types.isEmpty {
                 attributesAndTypes
             }
             if let effect = details.effect {
@@ -123,11 +123,7 @@ struct OnePieceDetailsSection: View {
 
     private var categoryAndColors: some View {
         HStack(spacing: 12) {
-            Text(details.category)
-                .font(.subheadline.weight(.semibold))
-                .padding(.horizontal, 10)
-                .padding(.vertical, 4)
-                .background(.quaternary, in: Capsule())
+            CapsuleBadge(details.category, font: .subheadline.weight(.semibold))
             HStack(spacing: 4) {
                 ForEach(details.colors, id: \.self) { color in
                     Circle()
@@ -164,15 +160,46 @@ struct OnePieceDetailsSection: View {
     }
 
     private var attributesAndTypes: some View {
-        VStack(spacing: 8) {
-            if let attributes = details.attributes {
-                LabeledContent("Attribute", value: attributes)
+        VStack(alignment: .leading, spacing: 12) {
+            if !details.attributes.isEmpty {
+                badges(titled: "Attribute", details.attributes)
             }
-            if let types = details.types {
-                LabeledContent("Type", value: types)
+            if !details.types.isEmpty {
+                badges(titled: "Type", details.types)
             }
         }
-        .font(.subheadline)
+    }
+
+    private func badges(titled title: LocalizedStringKey, _ names: [String]) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text(title)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+            FlowLayout {
+                ForEach(Array(names.enumerated()), id: \.offset) { _, name in
+                    CapsuleBadge(name)
+                }
+            }
+        }
+        .accessibilityElement(children: .combine)
+    }
+}
+
+struct CapsuleBadge: View {
+    private let text: String
+    private let font: Font
+
+    init(_ text: String, font: Font = .subheadline) {
+        self.text = text
+        self.font = font
+    }
+
+    var body: some View {
+        Text(text)
+            .font(font)
+            .padding(.horizontal, 10)
+            .padding(.vertical, 4)
+            .background(.quaternary, in: Capsule())
     }
 }
 

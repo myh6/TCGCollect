@@ -63,18 +63,18 @@ struct OnePieceDetailsPresentationTests {
         #expect(sut.stats == [.init(label: "Power", value: "4.000")])
     }
 
-    @Test func init_joinsAttributesAndTypes() {
+    @Test func init_keepsAttributesAndTypesInOrder() {
         let sut = makeSUT(attributes: ["Slash", "Strike"], types: ["FILM", "Straw Hat Crew"])
 
-        #expect(sut.attributes == "Slash / Strike")
-        #expect(sut.types == "FILM / Straw Hat Crew")
+        #expect(sut.attributes == ["Slash", "Strike"])
+        #expect(sut.types == ["FILM", "Straw Hat Crew"])
     }
 
     @Test func init_hasNoAttributesOrTypesWhenEmpty() {
         let sut = makeSUT(attributes: [], types: [])
 
-        #expect(sut.attributes == nil)
-        #expect(sut.types == nil)
+        #expect(sut.attributes.isEmpty)
+        #expect(sut.types.isEmpty)
     }
 
     @Test(arguments: ["[Blocker] **You may trash 1 Event**", nil])
