@@ -70,6 +70,13 @@ struct TCGCollectApp: App {
                 }
             }
             .environment(\.imageLoader, imageLoader)
+            #if DEBUG
+            .task {
+                if SampleCards.isOn, let ownedCardCollection {
+                    await SampleCards.addMissing(to: ownedCardCollection)
+                }
+            }
+            #endif
         }
     }
 
@@ -108,6 +115,9 @@ struct TCGCollectApp: App {
 
     /// Without a backend the page still shows the card, just without its details.
     private static func makeCardDetailsLoader() -> CardDetailsLoader {
+        #if DEBUG
+        if SampleCards.isOn { return SampleCardDetailsLoader() }
+        #endif
         do {
             let configuration = try BackendConfiguration(infoDictionary: Bundle.main.infoDictionary ?? [:])
             return CardDetailsComposer.makeRemoteCardDetailsLoader(baseURL: configuration.baseURL, apiKey: configuration.apiKey)
