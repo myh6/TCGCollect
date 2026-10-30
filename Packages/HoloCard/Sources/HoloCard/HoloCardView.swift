@@ -25,6 +25,31 @@ public struct HoloCardView<Card: View>: View {
     }
 
     public var body: some View {
+        #if os(iOS)
+        if DeviceMotion.isAvailable {
+            followingPhone
+        } else {
+            followingFinger
+        }
+        #else
+        followingFinger
+        #endif
+    }
+
+    #if os(iOS)
+    private var followingPhone: some View {
+        HoloCardSurface(tilt: tilt, style: style, isLit: true, cornerRadius: cornerRadius) { card }
+            .task {
+                for await newTilt in DeviceMotion.tilts(range: .degrees(20), maxAngle: maxAngle) {
+                    withAnimation(.interactiveSpring(duration: 0.15)) {
+                        tilt = newTilt
+                    }
+                }
+            }
+    }
+    #endif
+
+    private var followingFinger: some View {
         HoloCardSurface(tilt: tilt, style: style, isLit: isTouching, cornerRadius: cornerRadius) { card }
             .onGeometryChange(for: CGSize.self, of: \.size) { size = $0 }
             .gesture(tiltGesture)

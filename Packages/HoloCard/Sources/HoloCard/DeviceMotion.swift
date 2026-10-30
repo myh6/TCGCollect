@@ -10,9 +10,7 @@ import CoreMotion
 import SwiftUI
 
 enum DeviceMotion {
-    static var isAvailable: Bool {
-        CMMotionManager().isDeviceMotionAvailable
-    }
+    static let isAvailable = CMMotionManager().isDeviceMotionAvailable
 
     static func tilts(range: Angle, maxAngle: Angle) -> AsyncStream<HoloTilt> {
         AsyncStream { continuation in
