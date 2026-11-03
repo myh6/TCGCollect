@@ -119,6 +119,7 @@ struct LocalOwnedCardLoaderTests {
     private final class OwnedCardStoreSpy: OwnedCardStore {
         enum Message: Equatable {
             case retrieveAll
+            case countCopies(Card.ID)
             case insert([OwnedCard])
             case delete([OwnedCard.ID])
             case deleteNewestCopy(Card.ID)
@@ -126,12 +127,18 @@ struct LocalOwnedCardLoaderTests {
 
         private(set) var messages = [Message]()
         var retrievalResult: Result<[OwnedCard], Error> = .success([])
+        var countResult: Result<Int, Error> = .success(0)
         var insertionResult: Result<Void, Error> = .success(())
         var deletionResult: Result<Void, Error> = .success(())
 
         func retrieveAll() async throws -> [OwnedCard] {
             messages.append(.retrieveAll)
             return try retrievalResult.get()
+        }
+
+        func countCopies(of cardID: Card.ID) async throws -> Int {
+            messages.append(.countCopies(cardID))
+            return try countResult.get()
         }
 
         func insert(_ ownedCards: [OwnedCard]) async throws {

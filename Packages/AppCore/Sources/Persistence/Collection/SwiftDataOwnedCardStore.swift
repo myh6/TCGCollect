@@ -30,6 +30,10 @@ public actor SwiftDataOwnedCardStore: OwnedCardStore {
         return try modelContext.fetch(descriptor).map(\.ownedCard)
     }
 
+    public func countCopies(of cardID: Card.ID) throws -> Int {
+        try modelContext.fetchCount(FetchDescriptor<ManagedOwnedCard>(predicate: #Predicate { $0.cardID == cardID }))
+    }
+
     public func insert(_ ownedCards: [OwnedCard]) throws {
         // A context just for this batch: if saving fails, it's thrown away with the unsaved changes.
         // Rolling back the shared context doesn't drop them, so its fetches would still show the failed batch.

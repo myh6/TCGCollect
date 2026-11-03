@@ -295,6 +295,35 @@ extension SwiftDataStoreFileTests {
             #expect(try await sut.retrieveAll() == [oldest])
         }
 
+        @Test func countCopies_isZeroWithoutCopiesOfCard() async throws {
+            let sut = try makeSUT()
+            try await sut.insert([makeCopy(of: zoro)])
+
+            #expect(try await sut.countCopies(of: luffy.id) == 0)
+        }
+
+        @Test func countCopies_countsOnlyCopiesOfCard() async throws {
+            let sut = try makeSUT()
+            try await sut.insert([makeCopy(of: luffy), makeCopy(of: zoro), makeCopy(of: luffy)])
+
+            #expect(try await sut.countCopies(of: luffy.id) == 2)
+        }
+
+        @Test func countCopies_countsCopiesStoredByAnotherInstance() async throws {
+            try await makeSUT().insert([makeCopy(of: luffy), makeCopy(of: luffy)])
+
+            #expect(try await makeSUT().countCopies(of: luffy.id) == 2)
+        }
+
+        @Test func countCopies_leavesOutDeletedCopies() async throws {
+            let sut = try makeSUT()
+            try await sut.insert([makeCopy(of: luffy), makeCopy(of: luffy)])
+
+            try await sut.deleteNewestCopy(of: luffy.id)
+
+            #expect(try await sut.countCopies(of: luffy.id) == 1)
+        }
+
         // MARK: - Helpers
         private func makeSUT() throws -> OwnedCardStore {
             try SwiftDataOwnedCardStore(storeURL: storeURL)
