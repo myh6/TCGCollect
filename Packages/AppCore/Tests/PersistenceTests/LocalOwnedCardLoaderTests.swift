@@ -11,6 +11,7 @@ import Domain
 @testable import Persistence
 import TestHelpers
 
+@Suite(.timeLimit(.minutes(1)))
 struct LocalOwnedCardLoaderTests {
 
     @Test func init_doesNotMessageStore() {
@@ -187,7 +188,55 @@ struct LocalOwnedCardLoaderTests {
         try await sut.removeNewestCopy(of: 7)
     }
 
+    @Test(arguments: Change.allCases)
+    func change_announcesChangeOnStoreSuccess(change: Change) async throws {
+        let (sut, _) = makeSUT()
+        var changes = sut.changes().makeAsyncIterator()
+
+        try await change.make(in: sut)
+
+        #expect(await changes.next() != nil)
+    }
+
+    @Test(arguments: Change.allCases)
+    func change_announcesNoChangeOnStoreFailure(change: Change) async {
+        var (sut, store): (OwnedCardCollection?, OwnedCardStoreSpy) = makeSUT()
+        store.failEveryChange()
+        var changes = sut?.changes().makeAsyncIterator()
+
+        if let sut { try? await change.make(in: sut) }
+        sut = nil
+
+        #expect(await changes?.next() == nil)
+    }
+
+    @Test func addCopies_announcesNoChangeForRejectedCount() async {
+        var sut: OwnedCardCollection? = makeSUT().sut
+        var changes = sut?.changes().makeAsyncIterator()
+
+        try? await sut?.addCopies(of: Card(id: 7, name: "a card"), count: 0)
+        sut = nil
+
+        #expect(await changes?.next() == nil)
+    }
+
     // MARK: - Helpers
+    enum Change: CaseIterable {
+        case addCopies
+        case save
+        case remove
+        case removeNewestCopy
+
+        func make(in collection: OwnedCardCollection) async throws {
+            switch self {
+            case .addCopies: try await collection.addCopies(of: Card(id: 7, name: "a card"), count: 1)
+            case .save: try await collection.save([OwnedCard(card: Card(id: 7, name: "a card"))])
+            case .remove: try await collection.remove(ownedCardIDs: [UUID()])
+            case .removeNewestCopy: try await collection.removeNewestCopy(of: 7)
+            }
+        }
+    }
+
     private func makeSUT() -> (sut: OwnedCardCollection, store: OwnedCardStoreSpy) {
         let store = OwnedCardStoreSpy()
         let sut = LocalOwnedCardLoader(store: store)
@@ -208,6 +257,12 @@ struct LocalOwnedCardLoaderTests {
         }
 
         private(set) var messages = [Message]()
+
+        func failEveryChange() {
+            insertionResult = .failure(anyNSError())
+            deletionResult = .failure(anyNSError())
+            newestCopyDeletionResult = .failure(anyNSError())
+        }
         var retrievalResult: Result<[OwnedCard], Error> = .success([])
         var countResult: Result<Int, Error> = .success(0)
         var insertionResult: Result<Void, Error> = .success(())

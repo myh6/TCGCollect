@@ -10,7 +10,7 @@ import Domain
 
 /// The owned cards kept on this device. Store errors become this type's own errors,
 /// so callers never depend on how the store keeps them.
-public struct LocalOwnedCardLoader: OwnedCardLoader, OwnedCardCopyCounter, OwnedCardAdder, OwnedCardSaver, OwnedCardRemover {
+public struct LocalOwnedCardLoader: OwnedCardLoader, OwnedCardCopyCounter, OwnedCardAdder, OwnedCardSaver, OwnedCardRemover, OwnedCardChangeObserver {
     public enum LoadError: Error, Equatable {
         case failed
     }
@@ -25,9 +25,14 @@ public struct LocalOwnedCardLoader: OwnedCardLoader, OwnedCardCopyCounter, Owned
     }
 
     private let store: OwnedCardStore
+    private let broadcaster = OwnedCardChangeBroadcaster()
 
     public init(store: OwnedCardStore) {
         self.store = store
+    }
+
+    public func changes() -> AsyncStream<Void> {
+        broadcaster.changes()
     }
 
     public func load() async throws -> [OwnedCard] {
@@ -53,6 +58,7 @@ public struct LocalOwnedCardLoader: OwnedCardLoader, OwnedCardCopyCounter, Owned
         } catch {
             throw SaveError.failed
         }
+        broadcaster.announce()
     }
 
     public func save(_ ownedCards: [OwnedCard]) async throws {
@@ -61,6 +67,7 @@ public struct LocalOwnedCardLoader: OwnedCardLoader, OwnedCardCopyCounter, Owned
         } catch {
             throw SaveError.failed
         }
+        broadcaster.announce()
     }
 
     public func remove(ownedCardIDs: [OwnedCard.ID]) async throws {
@@ -69,6 +76,7 @@ public struct LocalOwnedCardLoader: OwnedCardLoader, OwnedCardCopyCounter, Owned
         } catch {
             throw RemoveError.failed
         }
+        broadcaster.announce()
     }
 
     public func removeNewestCopy(of cardID: Card.ID) async throws {
@@ -77,5 +85,6 @@ public struct LocalOwnedCardLoader: OwnedCardLoader, OwnedCardCopyCounter, Owned
         } catch {
             throw RemoveError.failed
         }
+        broadcaster.announce()
     }
 }

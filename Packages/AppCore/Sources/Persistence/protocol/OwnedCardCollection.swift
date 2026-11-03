@@ -7,4 +7,4 @@
 
 /// Everything that can be done with owned cards, for whoever builds the collection and hands it out.
 /// Screens should ask only for the protocol they use, e.g. `OwnedCardSaver` to add a card.
-public typealias OwnedCardCollection = OwnedCardLoader & OwnedCardCopyCounter & OwnedCardAdder & OwnedCardSaver & OwnedCardRemover
+public typealias OwnedCardCollection = OwnedCardLoader & OwnedCardCopyCounter & OwnedCardAdder & OwnedCardSaver & OwnedCardRemover & OwnedCardChangeObserver
