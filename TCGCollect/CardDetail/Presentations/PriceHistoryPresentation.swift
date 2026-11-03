@@ -34,10 +34,14 @@ nonisolated struct PriceHistoryPresentation: Equatable {
     let chartPriceRange: ClosedRange<Double>?
 
     init(_ points: [PricePoint], locale: Locale = .current) {
-        currentPrice = points.last?.price.formatted(locale: locale)
-        chartPoints = points.map { ChartPoint(date: $0.date, price: NSDecimalNumber(decimal: $0.price.amount).doubleValue) }
+        self.init(prices: points.map { (date: $0.date, price: $0.price) }, locale: locale)
+    }
+
+    init(prices: [(date: Date, price: Money)], locale: Locale = .current) {
+        currentPrice = prices.last?.price.formatted(locale: locale)
+        chartPoints = prices.map { ChartPoint(date: $0.date, price: NSDecimalNumber(decimal: $0.price.amount).doubleValue) }
         chartPriceRange = Self.range(around: chartPoints.map(\.price))
-        guard points.count > 1, let oldest = points.first?.price, let newest = points.last?.price else {
+        guard prices.count > 1, let oldest = prices.first?.price, let newest = prices.last?.price else {
             change = nil
             return
         }
