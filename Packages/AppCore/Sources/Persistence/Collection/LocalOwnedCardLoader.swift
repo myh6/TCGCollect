@@ -10,13 +10,14 @@ import Domain
 
 /// The owned cards kept on this device. Store errors become this type's own errors,
 /// so callers never depend on how the store keeps them.
-public struct LocalOwnedCardLoader: OwnedCardLoader, OwnedCardCopyCounter, OwnedCardSaver, OwnedCardRemover {
+public struct LocalOwnedCardLoader: OwnedCardLoader, OwnedCardCopyCounter, OwnedCardAdder, OwnedCardSaver, OwnedCardRemover {
     public enum LoadError: Error, Equatable {
         case failed
     }
 
     public enum SaveError: Error, Equatable {
         case failed
+        case invalidCopyCount
     }
 
     public enum RemoveError: Error, Equatable {
@@ -42,6 +43,15 @@ public struct LocalOwnedCardLoader: OwnedCardLoader, OwnedCardCopyCounter, Owned
             return try await store.countCopies(of: cardID)
         } catch {
             throw LoadError.failed
+        }
+    }
+
+    public func addCopies(of card: Card, count: Int) async throws {
+        guard count >= 1 else { throw SaveError.invalidCopyCount }
+        do {
+            try await store.insert((1...count).map { _ in OwnedCard(card: card) })
+        } catch {
+            throw SaveError.failed
         }
     }
 

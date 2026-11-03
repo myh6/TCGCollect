@@ -79,6 +79,40 @@ struct LocalOwnedCardLoaderTests {
         #expect(try await sut.countCopies(of: 7) == 3)
     }
 
+    @Test func addCopies_insertsOneNewOwnedCardPerCopyIntoStoreAsOneBatch() async throws {
+        let card = Card(id: 7, name: "a card")
+        let (sut, store) = makeSUT()
+
+        try await sut.addCopies(of: card, count: 3)
+
+        guard case let .insert(inserted) = try #require(store.messages.first) else {
+            Issue.record("Expected one insert, got \(store.messages)")
+            return
+        }
+        #expect(store.messages.count == 1)
+        #expect(inserted.map(\.card) == [card, card, card])
+        #expect(Set(inserted.map(\.id)).count == 3)
+    }
+
+    @Test(arguments: [0, -1])
+    func addCopies_rejectsCountBelowOneWithoutMessagingStore(count: Int) async {
+        let (sut, store) = makeSUT()
+
+        await #expect(throws: LocalOwnedCardLoader.SaveError.invalidCopyCount) {
+            try await sut.addCopies(of: Card(id: 7, name: "a card"), count: count)
+        }
+        #expect(store.messages.isEmpty)
+    }
+
+    @Test func addCopies_failsOnStoreInsertionError() async {
+        let (sut, store) = makeSUT()
+        store.insertionResult = .failure(anyNSError())
+
+        await #expect(throws: LocalOwnedCardLoader.SaveError.failed) {
+            try await sut.addCopies(of: Card(id: 7, name: "a card"), count: 1)
+        }
+    }
+
     @Test func save_insertsOwnedCardsIntoStoreAsOneBatch() async {
         let ownedCards = [makeOwnedCard(cardID: 1), makeOwnedCard(cardID: 1), makeOwnedCard(cardID: 2)]
         let (sut, store) = makeSUT()
