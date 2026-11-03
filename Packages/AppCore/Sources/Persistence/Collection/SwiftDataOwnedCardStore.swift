@@ -46,9 +46,13 @@ public actor SwiftDataOwnedCardStore: OwnedCardStore {
         try context.save()
     }
 
-    public func delete(ownedCardID: OwnedCard.ID) throws {
-        // Deletes straight from the store file, so there's nothing left to save.
-        try modelContext.delete(model: ManagedOwnedCard.self, where: #Predicate { $0.ownedCardID == ownedCardID })
+    public func delete(ownedCardIDs: [OwnedCard.ID]) throws {
+        let context = ModelContext(modelContainer)
+        let descriptor = FetchDescriptor<ManagedOwnedCard>(predicate: #Predicate { ownedCardIDs.contains($0.ownedCardID) })
+        for stored in try context.fetch(descriptor) {
+            context.delete(stored)
+        }
+        try context.save()
     }
 
     private func managedOwnedCard(withID id: OwnedCard.ID, in context: ModelContext) throws -> ManagedOwnedCard? {

@@ -14,6 +14,6 @@ public protocol OwnedCardStore {
     /// Inserts all of `ownedCards` or, on failure, none of them. Each replaces any stored owned card
     /// with the same `id`, so saving an edited card updates it; new ones go after the stored ones, in order.
     func insert(_ ownedCards: [OwnedCard]) async throws
-    /// Does nothing when no owned card has `ownedCardID`: either way, it's no longer stored.
-    func delete(ownedCardID: OwnedCard.ID) async throws
+    /// Deletes all of `ownedCardIDs` or, on failure, none of them. IDs that aren't stored are ignored.
+    func delete(ownedCardIDs: [OwnedCard.ID]) async throws
 }

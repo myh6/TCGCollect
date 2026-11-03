@@ -47,7 +47,7 @@ public struct LocalOwnedCardLoader: OwnedCardLoader, OwnedCardSaver, OwnedCardRe
 
     public func remove(ownedCardID: OwnedCard.ID) async throws {
         do {
-            try await store.delete(ownedCardID: ownedCardID)
+            try await store.delete(ownedCardIDs: [ownedCardID])
         } catch {
             throw RemoveError.failed
         }

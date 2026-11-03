@@ -184,36 +184,58 @@ extension SwiftDataStoreFileTests {
             #expect(try await makeSUT().retrieveAll() == [stored])
         }
 
-        @Test func delete_removesOnlyOwnedCardWithID() async throws {
-            let kept = OwnedCard(card: Card(id: 1, name: "a card"))
-            let deleted = OwnedCard(card: Card(id: 2, name: "another card"))
+        @Test func delete_removesOnlyOwnedCardsWithIDs() async throws {
+            let ownedCards = [1, 2, 3].map { OwnedCard(card: Card(id: $0, name: "card \($0)")) }
             let sut = try makeSUT()
-            try await sut.insert([kept])
-            try await sut.insert([deleted])
+            try await sut.insert(ownedCards)
 
-            try await sut.delete(ownedCardID: deleted.id)
+            try await sut.delete(ownedCardIDs: [ownedCards[0].id, ownedCards[2].id])
 
-            #expect(try await sut.retrieveAll() == [kept])
+            #expect(try await sut.retrieveAll() == [ownedCards[1]])
         }
 
-        @Test func delete_removesOwnedCardForAnotherInstanceToo() async throws {
-            let ownedCard = makeOwnedCardWithAllValues()
+        @Test func delete_removesOwnedCardsForAnotherInstanceToo() async throws {
+            let ownedCards = [1, 2].map { OwnedCard(card: Card(id: $0, name: "card \($0)")) }
             let sut = try makeSUT()
-            try await sut.insert([ownedCard])
+            try await sut.insert(ownedCards)
 
-            try await sut.delete(ownedCardID: ownedCard.id)
+            try await sut.delete(ownedCardIDs: ownedCards.map(\.id))
 
             #expect(try await makeSUT().retrieveAll().isEmpty)
         }
 
-        @Test func delete_doesNothingForIDNotInStore() async throws {
+        @Test func delete_ignoresIDsNotInStore() async throws {
+            let kept = OwnedCard(card: Card(id: 1, name: "a card"))
+            let deleted = OwnedCard(card: Card(id: 2, name: "another card"))
+            let sut = try makeSUT()
+            try await sut.insert([kept, deleted])
+
+            try await sut.delete(ownedCardIDs: [UUID(), deleted.id])
+
+            #expect(try await sut.retrieveAll() == [kept])
+        }
+
+        @Test func delete_ofEmptyBatchDoesNothing() async throws {
             let ownedCard = makeOwnedCardWithAllValues()
             let sut = try makeSUT()
             try await sut.insert([ownedCard])
 
-            try await sut.delete(ownedCardID: UUID())
+            try await sut.delete(ownedCardIDs: [])
 
             #expect(try await sut.retrieveAll() == [ownedCard])
+        }
+
+        @Test func delete_removesNoneOfBatchWhenSaveFails() async throws {
+            let ownedCards = [1, 2].map { OwnedCard(card: Card(id: $0, name: "card \($0)")) }
+            try await makeSUT().insert(ownedCards)
+            let sut = try makeReadOnlySUT()
+
+            await #expect(throws: (any Error).self) {
+                try await sut.delete(ownedCardIDs: ownedCards.map(\.id))
+            }
+
+            #expect(try await sut.retrieveAll() == ownedCards)
+            #expect(try await makeSUT().retrieveAll() == ownedCards)
         }
 
         // MARK: - Helpers

@@ -86,7 +86,7 @@ struct LocalOwnedCardLoaderTests {
 
         try? await sut.remove(ownedCardID: id)
 
-        #expect(store.messages == [.delete(id)])
+        #expect(store.messages == [.delete([id])])
     }
 
     @Test func remove_failsOnStoreDeletionError() async {
@@ -120,7 +120,7 @@ struct LocalOwnedCardLoaderTests {
         enum Message: Equatable {
             case retrieveAll
             case insert([OwnedCard])
-            case delete(OwnedCard.ID)
+            case delete([OwnedCard.ID])
         }
 
         private(set) var messages = [Message]()
@@ -138,8 +138,8 @@ struct LocalOwnedCardLoaderTests {
             try insertionResult.get()
         }
 
-        func delete(ownedCardID: OwnedCard.ID) async throws {
-            messages.append(.delete(ownedCardID))
+        func delete(ownedCardIDs: [OwnedCard.ID]) async throws {
+            messages.append(.delete(ownedCardIDs))
             try deletionResult.get()
         }
     }
