@@ -114,31 +114,6 @@ struct LocalOwnedCardLoaderTests {
         }
     }
 
-    @Test func save_insertsOwnedCardsIntoStoreAsOneBatch() async {
-        let ownedCards = [makeOwnedCard(cardID: 1), makeOwnedCard(cardID: 1), makeOwnedCard(cardID: 2)]
-        let (sut, store) = makeSUT()
-
-        try? await sut.save(ownedCards)
-
-        #expect(store.messages == [.insert(ownedCards)])
-    }
-
-    @Test func save_failsOnStoreInsertionError() async {
-        let (sut, store) = makeSUT()
-        store.insertionResult = .failure(anyNSError())
-
-        await #expect(throws: LocalOwnedCardLoader.SaveError.failed) {
-            try await sut.save([makeOwnedCard(cardID: 1)])
-        }
-    }
-
-    @Test func save_succeedsOnStoreInsertionSuccess() async throws {
-        let (sut, store) = makeSUT()
-        store.insertionResult = .success(())
-
-        try await sut.save([makeOwnedCard(cardID: 1)])
-    }
-
     @Test func remove_deletesOwnedCardsWithIDsFromStoreAsOneBatch() async {
         let ids = [UUID(), UUID()]
         let (sut, store) = makeSUT()
@@ -223,14 +198,12 @@ struct LocalOwnedCardLoaderTests {
     // MARK: - Helpers
     enum Change: CaseIterable {
         case addCopies
-        case save
         case remove
         case removeNewestCopy
 
         func make(in collection: OwnedCardCollection) async throws {
             switch self {
             case .addCopies: try await collection.addCopies(of: Card(id: 7, name: "a card"), count: 1)
-            case .save: try await collection.save([OwnedCard(card: Card(id: 7, name: "a card"))])
             case .remove: try await collection.remove(ownedCardIDs: [UUID()])
             case .removeNewestCopy: try await collection.removeNewestCopy(of: 7)
             }
