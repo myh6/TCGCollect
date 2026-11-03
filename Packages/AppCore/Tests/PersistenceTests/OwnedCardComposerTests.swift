@@ -46,9 +46,19 @@ extension SwiftDataStoreFileTests {
             let sut = try makeSUT()
             try await sut.save([kept, removed])
 
-            try await sut.remove(ownedCardID: removed.id)
+            try await sut.remove(ownedCardIDs: [removed.id])
 
             #expect(try await makeSUT().load() == [kept])
+        }
+
+        @Test func makeLocalOwnedCardCollection_doesNotDeliverNewestCopyRemovedByAnotherCollection() async throws {
+            let oldest = makeOwnedCard(cardID: 1)
+            let sut = try makeSUT()
+            try await sut.save([oldest, makeOwnedCard(cardID: 1)])
+
+            try await sut.removeNewestCopy(of: 1)
+
+            #expect(try await makeSUT().load() == [oldest])
         }
 
         @Test func makeOwnedCardSearcher_findsOwnedCardsSavedInCollection() async throws {

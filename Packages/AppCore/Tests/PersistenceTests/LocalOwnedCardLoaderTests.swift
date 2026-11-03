@@ -80,13 +80,13 @@ struct LocalOwnedCardLoaderTests {
         try await sut.save([makeOwnedCard(cardID: 1)])
     }
 
-    @Test func remove_deletesOwnedCardWithIDFromStore() async {
-        let id = UUID()
+    @Test func remove_deletesOwnedCardsWithIDsFromStoreAsOneBatch() async {
+        let ids = [UUID(), UUID()]
         let (sut, store) = makeSUT()
 
-        try? await sut.remove(ownedCardID: id)
+        try? await sut.remove(ownedCardIDs: ids)
 
-        #expect(store.messages == [.delete([id])])
+        #expect(store.messages == [.delete(ids)])
     }
 
     @Test func remove_failsOnStoreDeletionError() async {
@@ -94,7 +94,7 @@ struct LocalOwnedCardLoaderTests {
         store.deletionResult = .failure(anyNSError())
 
         await #expect(throws: LocalOwnedCardLoader.RemoveError.failed) {
-            try await sut.remove(ownedCardID: UUID())
+            try await sut.remove(ownedCardIDs: [UUID()])
         }
     }
 
@@ -102,7 +102,31 @@ struct LocalOwnedCardLoaderTests {
         let (sut, store) = makeSUT()
         store.deletionResult = .success(())
 
-        try await sut.remove(ownedCardID: UUID())
+        try await sut.remove(ownedCardIDs: [UUID()])
+    }
+
+    @Test func removeNewestCopy_deletesNewestCopyOfCardFromStore() async {
+        let (sut, store) = makeSUT()
+
+        try? await sut.removeNewestCopy(of: 7)
+
+        #expect(store.messages == [.deleteNewestCopy(7)])
+    }
+
+    @Test func removeNewestCopy_failsOnStoreDeletionError() async {
+        let (sut, store) = makeSUT()
+        store.newestCopyDeletionResult = .failure(anyNSError())
+
+        await #expect(throws: LocalOwnedCardLoader.RemoveError.failed) {
+            try await sut.removeNewestCopy(of: 7)
+        }
+    }
+
+    @Test func removeNewestCopy_succeedsOnStoreDeletionSuccess() async throws {
+        let (sut, store) = makeSUT()
+        store.newestCopyDeletionResult = .success(())
+
+        try await sut.removeNewestCopy(of: 7)
     }
 
     // MARK: - Helpers
@@ -130,6 +154,7 @@ struct LocalOwnedCardLoaderTests {
         var countResult: Result<Int, Error> = .success(0)
         var insertionResult: Result<Void, Error> = .success(())
         var deletionResult: Result<Void, Error> = .success(())
+        var newestCopyDeletionResult: Result<Void, Error> = .success(())
 
         func retrieveAll() async throws -> [OwnedCard] {
             messages.append(.retrieveAll)
@@ -153,7 +178,7 @@ struct LocalOwnedCardLoaderTests {
 
         func deleteNewestCopy(of cardID: Card.ID) async throws {
             messages.append(.deleteNewestCopy(cardID))
-            try deletionResult.get()
+            try newestCopyDeletionResult.get()
         }
     }
 }
