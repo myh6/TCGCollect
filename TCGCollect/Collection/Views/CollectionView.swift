@@ -10,6 +10,7 @@ import AppCore
 
 struct CollectionView: View {
     let viewModel: CollectionViewModel
+    let valueViewModel: CollectionValueViewModel?
 
     var body: some View {
         content
@@ -31,7 +32,11 @@ struct CollectionView: View {
                     description: Text("Cards you add from Chat show up here.")
                 )
             } else {
-                OwnedCardsGrid(cards: ownedCards.map(OwnedCardPresentation.init))
+                OwnedCardsGrid(cards: ownedCards.map(OwnedCardPresentation.init)) {
+                    if let valueViewModel {
+                        CollectionValueSection(viewModel: valueViewModel, ownedCards: ownedCards)
+                    }
+                }
             }
         case .failed:
             ContentUnavailableView(
@@ -43,20 +48,24 @@ struct CollectionView: View {
     }
 }
 
-struct OwnedCardsGrid: View {
+struct OwnedCardsGrid<Header: View>: View {
     let cards: [OwnedCardPresentation]
+    @ViewBuilder let header: Header
 
     // As many columns as fit, each at least as wide as a tile.
     private let columns = [GridItem(.adaptive(minimum: 104), spacing: 12, alignment: .top)]
 
     var body: some View {
         ScrollView {
-            LazyVGrid(columns: columns, spacing: 16) {
-                ForEach(cards) { card in
-                    NavigationLink(value: card.card) {
-                        OwnedCardTile(card: card)
+            VStack(spacing: 24) {
+                header
+                LazyVGrid(columns: columns, spacing: 16) {
+                    ForEach(cards) { card in
+                        NavigationLink(value: card.card) {
+                            OwnedCardTile(card: card)
+                        }
+                        .buttonStyle(.plain)
                     }
-                    .buttonStyle(.plain)
                 }
             }
             .padding()
@@ -111,6 +120,16 @@ private nonisolated struct PreviewLoader: OwnedCardLoader {
     }
 }
 
+private nonisolated struct PreviewValueLoader: CollectionValueHistoryLoader {
+    func loadValueHistory(of quantities: [Card.ID: Int], days: Int?) async throws -> CollectionValueHistory {
+        let values: [Decimal] = [118.4, 121.0, 119.75, 124.3, 126.1, 125.5, 129.8]
+        let points = values.enumerated().map { index, value in
+            CollectionValuePoint(date: .now.addingTimeInterval(TimeInterval(index - values.count + 1) * 86_400), value: Money(amount: value, currencyCode: "USD"))
+        }
+        return CollectionValueHistory(currentTotal: points.last?.value, points: points)
+    }
+}
+
 /// Dummy cards, with and without number, rarity and image, to see every kind of tile.
 private let previewOwnedCards = [
     Card(id: 1, name: "Monkey.D.Luffy", number: "OP01-024", rarity: "L"),
@@ -123,25 +142,28 @@ private let previewOwnedCards = [
 
 #Preview("Cards") {
     NavigationStack {
-        CollectionView(viewModel: CollectionViewModel(loader: PreviewLoader(result: .success(previewOwnedCards))))
+        CollectionView(
+            viewModel: CollectionViewModel(loader: PreviewLoader(result: .success(previewOwnedCards))),
+            valueViewModel: CollectionValueViewModel(loader: PreviewValueLoader())
+        )
     }
 }
 
 #Preview("Empty") {
     NavigationStack {
-        CollectionView(viewModel: CollectionViewModel(loader: PreviewLoader(result: .success([]))))
+        CollectionView(viewModel: CollectionViewModel(loader: PreviewLoader(result: .success([]))), valueViewModel: nil)
     }
 }
 
 #Preview("Loading") {
     NavigationStack {
-        CollectionView(viewModel: CollectionViewModel(loader: PreviewLoader(result: nil)))
+        CollectionView(viewModel: CollectionViewModel(loader: PreviewLoader(result: nil)), valueViewModel: nil)
     }
 }
 
 #Preview("Failed") {
     NavigationStack {
-        CollectionView(viewModel: CollectionViewModel(loader: PreviewLoader(result: .failure(CancellationError()))))
+        CollectionView(viewModel: CollectionViewModel(loader: PreviewLoader(result: .failure(CancellationError()))), valueViewModel: nil)
     }
 }
 #endif
