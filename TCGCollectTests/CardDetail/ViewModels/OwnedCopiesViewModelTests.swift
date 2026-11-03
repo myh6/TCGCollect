@@ -15,85 +15,78 @@ import AppCore
 struct OwnedCopiesViewModelTests {
 
     @Test func init_startsIdleWithoutLoading() {
-        let (sut, loader) = makeSUT()
+        let (sut, counter, _) = makeSUT()
 
         #expect(sut.copies == .idle)
-        #expect(loader.loadCount == 0)
+        #expect(counter.countCount == 0)
     }
 
     @Test func load_isLoadingWhileCounting() async {
-        let (sut, loader) = makeSUT()
+        let (sut, counter, _) = makeSUT()
 
-        let loading = await startLoading(sut, loader: loader)
+        let loading = await startLoading(sut, counter: counter)
         #expect(sut.copies == .loading)
 
-        loader.complete(with: .success([]))
+        counter.complete(with: .success(0))
         await loading.value
     }
 
-    @Test func load_countsOnlyThisCardsCopies() async {
-        let (sut, loader) = makeSUT(cardID: 7)
+    @Test func load_countsThisCardsCopies() async {
+        let (sut, counter, _) = makeSUT(cardID: 7)
 
-        await load(sut, loader: loader, completingWith: .success([makeOwnedCard(cardID: 7), makeOwnedCard(cardID: 8), makeOwnedCard(cardID: 7)]))
+        await load(sut, counter: counter, completingWith: .success(2))
 
+        #expect(counter.countedCardIDs == [7])
         #expect(sut.copies == .loaded(2))
     }
 
-    @Test func load_countsNoCopiesWhenNotOwned() async {
-        let (sut, loader) = makeSUT(cardID: 7)
-
-        await load(sut, loader: loader, completingWith: .success([makeOwnedCard(cardID: 8)]))
-
-        #expect(sut.copies == .loaded(0))
-    }
-
     @Test func load_failsOnLoaderFailure() async {
-        let (sut, loader) = makeSUT()
+        let (sut, counter, _) = makeSUT()
 
-        await load(sut, loader: loader, completingWith: .failure(anyError()))
+        await load(sut, counter: counter, completingWith: .failure(anyError()))
 
         #expect(sut.copies == .failed)
     }
 
     @Test func load_ignoresLoadWhileLoading() async {
-        let (sut, loader) = makeSUT()
-        let firstLoading = await startLoading(sut, loader: loader)
-        loader.setCompletionForNewCalls(to: .success([]))
+        let (sut, counter, _) = makeSUT()
+        let firstLoading = await startLoading(sut, counter: counter)
+        counter.setCompletionForNewCalls(to: .success(0))
 
         await sut.load()
-        #expect(loader.loadCount == 1)
+        #expect(counter.countCount == 1)
 
-        loader.complete(with: .success([]))
+        counter.complete(with: .success(0))
         await firstLoading.value
     }
 
     @Test func load_doesNotRecountLoadedCopies() async {
-        let (sut, loader) = makeSUT()
-        await load(sut, loader: loader, completingWith: .success([]))
-        loader.setCompletionForNewCalls(to: .success([]))
+        let (sut, counter, _) = makeSUT()
+        await load(sut, counter: counter, completingWith: .success(0))
+        counter.setCompletionForNewCalls(to: .success(0))
 
         await sut.load()
 
-        #expect(loader.loadCount == 1)
+        #expect(counter.countCount == 1)
     }
 
     @Test func refresh_keepsShowingCountWhileRecounting() async {
-        let (sut, loader) = makeSUT(cardID: 7)
-        await load(sut, loader: loader, completingWith: .success([makeOwnedCard(cardID: 7)]))
+        let (sut, counter, _) = makeSUT(cardID: 7)
+        await load(sut, counter: counter, completingWith: .success(1))
 
         let refreshing = Task { await sut.refresh() }
-        await loader.waitForCall(at: 1)
+        await counter.waitForCall(at: 1)
         #expect(sut.copies == .loaded(1))
 
-        loader.complete(with: .success([makeOwnedCard(cardID: 7), makeOwnedCard(cardID: 7)]), at: 1)
+        counter.complete(with: .success(2), at: 1)
         await refreshing.value
         #expect(sut.copies == .loaded(2))
     }
 
     @Test func refresh_keepsCountWhenRecountFails() async {
-        let (sut, loader) = makeSUT(cardID: 7)
-        await load(sut, loader: loader, completingWith: .success([makeOwnedCard(cardID: 7)]))
-        loader.setCompletionForNewCalls(to: .failure(anyError()))
+        let (sut, counter, _) = makeSUT(cardID: 7)
+        await load(sut, counter: counter, completingWith: .success(1))
+        counter.setCompletionForNewCalls(to: .failure(anyError()))
 
         await sut.refresh()
 
@@ -101,23 +94,60 @@ struct OwnedCopiesViewModelTests {
     }
 
     @Test func refresh_countsWhenNothingCountedYet() async {
-        let (sut, loader) = makeSUT(cardID: 7)
-        loader.setCompletionForNewCalls(to: .success([makeOwnedCard(cardID: 7)]))
+        let (sut, counter, _) = makeSUT(cardID: 7)
+        counter.setCompletionForNewCalls(to: .success(1))
 
         await sut.refresh()
 
         #expect(sut.copies == .loaded(1))
     }
 
-    // MARK: - Helpers
-    private func makeSUT(cardID: Card.ID = 1) -> (sut: OwnedCopiesViewModel, loader: CollectionLoaderSpy) {
-        let loader = CollectionLoaderSpy()
-        let sut = OwnedCopiesViewModel(cardID: cardID, loader: loader)
-        return (sut, loader)
+    @Test func start_listensForChangesBeforeCounting() async {
+        let (sut, counter, observer) = makeSUT()
+
+        let starting = Task { await sut.start() }
+        await counter.waitForCall(at: 0)
+        #expect(observer.listenCount == 1)
+
+        counter.complete(with: .success(0))
+        observer.finish()
+        await starting.value
     }
 
-    private func makeOwnedCard(cardID: Card.ID) -> OwnedCard {
-        OwnedCard(card: Card(id: cardID, name: "card \(cardID)"))
+    @Test func start_recountsAfterEveryChange() async {
+        let (sut, counter, observer) = makeSUT()
+        let starting = Task { await sut.start() }
+        await counter.waitForCall(at: 0)
+        counter.complete(with: .success(1))
+
+        observer.announceChange()
+        await counter.waitForCall(at: 1)
+        counter.complete(with: .success(2), at: 1)
+        observer.announceChange()
+        await counter.waitForCall(at: 2)
+        counter.complete(with: .success(3), at: 2)
+        observer.finish()
+        await starting.value
+
+        #expect(sut.copies == .loaded(3))
+    }
+
+    @Test func start_returnsOnceChangesEnd() async {
+        let (sut, counter, observer) = makeSUT()
+        counter.setCompletionForNewCalls(to: .success(0))
+        observer.finish()
+
+        await sut.start()
+
+        #expect(sut.copies == .loaded(0))
+    }
+
+    // MARK: - Helpers
+    private func makeSUT(cardID: Card.ID = 1) -> (sut: OwnedCopiesViewModel, counter: CopyCounterSpy, observer: ChangeObserverStub) {
+        let counter = CopyCounterSpy()
+        let observer = ChangeObserverStub()
+        let sut = OwnedCopiesViewModel(cardID: cardID, counter: counter, observer: observer)
+        return (sut, counter, observer)
     }
 
     private func anyError() -> Error {
@@ -125,32 +155,51 @@ struct OwnedCopiesViewModelTests {
     }
 
     private func startLoading(
-        _ sut: OwnedCopiesViewModel, loader: CollectionLoaderSpy,
+        _ sut: OwnedCopiesViewModel, counter: CopyCounterSpy,
         sourceLocation: SourceLocation = #_sourceLocation
     ) async -> Task<Void, Never> {
         let loading = Task { await sut.load() }
-        await loader.waitForCall(at: 0, sourceLocation: sourceLocation)
+        await counter.waitForCall(at: 0, sourceLocation: sourceLocation)
         return loading
     }
 
     private func load(
-        _ sut: OwnedCopiesViewModel, loader: CollectionLoaderSpy, completingWith result: Result<[OwnedCard], Error>,
+        _ sut: OwnedCopiesViewModel, counter: CopyCounterSpy, completingWith result: Result<Int, Error>,
         sourceLocation: SourceLocation = #_sourceLocation
     ) async {
-        let loading = await startLoading(sut, loader: loader, sourceLocation: sourceLocation)
-        loader.complete(with: result)
+        let loading = await startLoading(sut, counter: counter, sourceLocation: sourceLocation)
+        counter.complete(with: result)
         await loading.value
     }
 
-    private final class CollectionLoaderSpy: HeldCalls<Void, [OwnedCard]>, OwnedCardLoader {
-        var loadCount: Int { inputs.count }
+    private final class CopyCounterSpy: HeldCalls<Card.ID, Int>, OwnedCardCopyCounter {
+        var countedCardIDs: [Card.ID] { inputs }
+        var countCount: Int { inputs.count }
 
         init() {
-            super.init(callName: "load")
+            super.init(callName: "countCopies")
         }
 
-        func load() async throws -> [OwnedCard] {
-            try await call(with: ())
+        func countCopies(of cardID: Card.ID) async throws -> Int {
+            try await call(with: cardID)
+        }
+    }
+
+    private final class ChangeObserverStub: OwnedCardChangeObserver {
+        private(set) var listenCount = 0
+        private let (stream, continuation) = AsyncStream.makeStream(of: Void.self)
+
+        func changes() -> AsyncStream<Void> {
+            listenCount += 1
+            return stream
+        }
+
+        func announceChange() {
+            continuation.yield()
+        }
+
+        func finish() {
+            continuation.finish()
         }
     }
 }

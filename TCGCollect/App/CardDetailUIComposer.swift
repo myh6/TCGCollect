@@ -14,9 +14,13 @@ enum CardDetailUIComposer {
         let addToCollection: AddToCollectionViewModel
     }
 
-    static func makeOwnership(of cardID: Card.ID, in collection: OwnedCardLoader & OwnedCardSaver) -> Ownership {
-        let copies = OwnedCopiesViewModel(cardID: cardID, loader: collection)
-        let saverThenRecount = OwnedCardSaverAfterSaveDecorator(decoratee: collection, afterSave: { await copies.refresh() })
-        return Ownership(copies: copies, addToCollection: AddToCollectionViewModel(saver: saverThenRecount))
+    static func makeOwnership(
+        of cardID: Card.ID,
+        in collection: OwnedCardCopyCounter & OwnedCardChangeObserver & OwnedCardSaver
+    ) -> Ownership {
+        Ownership(
+            copies: OwnedCopiesViewModel(cardID: cardID, counter: collection, observer: collection),
+            addToCollection: AddToCollectionViewModel(saver: collection)
+        )
     }
 }

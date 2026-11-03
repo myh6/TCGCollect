@@ -25,7 +25,7 @@ struct CardDetailView: View {
         .toolbarTitleDisplayMode(.inline)
         .task { await viewModel.loadDetails() }
         .task { await priceViewModel.load() }
-        .task { await ownership?.copies.load() }
+        .task { await ownership?.copies.start() }
     }
 }
 
@@ -269,19 +269,25 @@ private nonisolated struct PreviewPriceHistoryLoader: CardPriceHistoryLoader {
     }
 }
 
-private final class PreviewCollection: OwnedCardLoader, OwnedCardSaver {
+private final class PreviewCollection: OwnedCardCopyCounter, OwnedCardChangeObserver, OwnedCardSaver {
     private var ownedCards: [OwnedCard]
+    private let (changeStream, changeContinuation) = AsyncStream.makeStream(of: Void.self)
 
     init(cards: [Card]) {
         ownedCards = cards.map { OwnedCard(card: $0) }
     }
 
-    func load() async throws -> [OwnedCard] {
-        ownedCards
+    func countCopies(of cardID: Card.ID) async throws -> Int {
+        ownedCards.filter { $0.card.id == cardID }.count
+    }
+
+    func changes() -> AsyncStream<Void> {
+        changeStream
     }
 
     func save(_ newCards: [OwnedCard]) async throws {
         ownedCards += newCards
+        changeContinuation.yield()
     }
 }
 

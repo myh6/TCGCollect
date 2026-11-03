@@ -32,50 +32,28 @@ struct CardDetailUIComposerTests {
         #expect(collection.ownedCards.map(\.card) == [card])
     }
 
-    @Test func addToCollection_recountsCopiesAfterAdding() async {
-        let card = makeCard(id: 7)
-        let collection = CollectionStub()
-        let sut = CardDetailUIComposer.makeOwnership(of: 7, in: collection)
-        await sut.copies.load()
-
-        await sut.addToCollection.add(card)
-
-        #expect(sut.copies.copies == .loaded(1))
-    }
-
-    @Test func addToCollection_doesNotRecountWhenAddingFails() async {
-        let collection = CollectionStub(saveError: NSError(domain: "any error", code: 0))
-        let sut = CardDetailUIComposer.makeOwnership(of: 7, in: collection)
-        await sut.copies.load()
-
-        await sut.addToCollection.add(makeCard(id: 7))
-
-        #expect(collection.loadCount == 1)
-    }
-
     // MARK: - Helpers
     private func makeCard(id: Int) -> Card {
         Card(id: id, name: "card \(id)")
     }
 
     @MainActor
-    private final class CollectionStub: OwnedCardLoader, OwnedCardSaver {
+    private final class CollectionStub: OwnedCardCopyCounter, OwnedCardChangeObserver, OwnedCardSaver {
         private(set) var ownedCards: [OwnedCard]
-        private(set) var loadCount = 0
-        private let saveError: Error?
 
-        init(ownedCards: [OwnedCard] = [], saveError: Error? = nil) {
+        init(ownedCards: [OwnedCard] = []) {
             self.ownedCards = ownedCards
-            self.saveError = saveError
         }
 
-        func load() async throws -> [OwnedCard] {
-            loadCount += 1
-            return ownedCards
+        func countCopies(of cardID: Card.ID) async throws -> Int {
+            ownedCards.filter { $0.card.id == cardID }.count
+        }
+
+        func changes() -> AsyncStream<Void> {
+            AsyncStream { $0.finish() }
         }
 
         func save(_ newCards: [OwnedCard]) async throws {
-            if let saveError { throw saveError }
             ownedCards += newCards
         }
     }
