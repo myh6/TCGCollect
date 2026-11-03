@@ -22,7 +22,7 @@ struct CardDetailUIComposerTests {
         #expect(sut.copies.copies == .loaded(1))
     }
 
-    @Test func addToCollection_savesToCollection() async {
+    @Test func addToCollection_addsToCollection() async {
         let card = makeCard(id: 7)
         let collection = CollectionStub()
         let sut = CardDetailUIComposer.makeOwnership(of: 7, in: collection)
@@ -38,7 +38,7 @@ struct CardDetailUIComposerTests {
     }
 
     @MainActor
-    private final class CollectionStub: OwnedCardCopyCounter, OwnedCardChangeObserver, OwnedCardSaver {
+    private final class CollectionStub: OwnedCardCopyCounter, OwnedCardChangeObserver, OwnedCardAdder {
         private(set) var ownedCards: [OwnedCard]
 
         init(ownedCards: [OwnedCard] = []) {
@@ -53,8 +53,8 @@ struct CardDetailUIComposerTests {
             AsyncStream { $0.finish() }
         }
 
-        func save(_ newCards: [OwnedCard]) async throws {
-            ownedCards += newCards
+        func addCopies(of card: Card, count: Int) async throws {
+            ownedCards += (1...count).map { _ in OwnedCard(card: card) }
         }
     }
 }

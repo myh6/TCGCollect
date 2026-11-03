@@ -33,7 +33,7 @@ struct TCGCollectApp: App {
         // Both from the same collection, so the app never opens the store twice.
         let collection = Self.makeOwnedCardCollection()
         _ownedCardCollection = State(initialValue: collection)
-        _addToCollectionViewModel = State(initialValue: collection.map { AddToCollectionViewModel(saver: $0) })
+        _addToCollectionViewModel = State(initialValue: collection.map { AddToCollectionViewModel(adder: $0) })
         _collectionViewModel = State(initialValue: collection.map { CollectionViewModel(loader: $0) })
         _ownedCardsSearch = State(initialValue: collection.map {
             CardSearchUIComposer.makeOwnedCardsSection(searching: OwnedCardComposer.makeOwnedCardSearcher(searching: $0))
@@ -102,7 +102,7 @@ struct TCGCollectApp: App {
 
     private var makeSearchAddToCollection: (() -> AddToCollectionViewModel)? {
         guard let ownedCardCollection else { return nil }
-        return { AddToCollectionViewModel(saver: ownedCardCollection) }
+        return { AddToCollectionViewModel(adder: ownedCardCollection) }
     }
 
     /// nil when the backend isn't configured, e.g. in Release builds for now.

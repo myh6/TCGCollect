@@ -269,7 +269,7 @@ private nonisolated struct PreviewPriceHistoryLoader: CardPriceHistoryLoader {
     }
 }
 
-private final class PreviewCollection: OwnedCardCopyCounter, OwnedCardChangeObserver, OwnedCardSaver {
+private final class PreviewCollection: OwnedCardCopyCounter, OwnedCardChangeObserver, OwnedCardAdder {
     private var ownedCards: [OwnedCard]
     private let (changeStream, changeContinuation) = AsyncStream.makeStream(of: Void.self)
 
@@ -285,8 +285,8 @@ private final class PreviewCollection: OwnedCardCopyCounter, OwnedCardChangeObse
         changeStream
     }
 
-    func save(_ newCards: [OwnedCard]) async throws {
-        ownedCards += newCards
+    func addCopies(of card: Card, count: Int) async throws {
+        ownedCards += (1...count).map { _ in OwnedCard(card: card) }
         changeContinuation.yield()
     }
 }

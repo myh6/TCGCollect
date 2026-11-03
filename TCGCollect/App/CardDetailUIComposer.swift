@@ -16,11 +16,11 @@ enum CardDetailUIComposer {
 
     static func makeOwnership(
         of cardID: Card.ID,
-        in collection: OwnedCardCopyCounter & OwnedCardChangeObserver & OwnedCardSaver
+        in collection: OwnedCardCopyCounter & OwnedCardChangeObserver & OwnedCardAdder
     ) -> Ownership {
         Ownership(
             copies: OwnedCopiesViewModel(cardID: cardID, counter: collection, observer: collection),
-            addToCollection: AddToCollectionViewModel(saver: collection)
+            addToCollection: AddToCollectionViewModel(adder: collection)
         )
     }
 }
