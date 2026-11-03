@@ -16,4 +16,5 @@ public protocol OwnedCardStore {
     func insert(_ ownedCards: [OwnedCard]) async throws
     /// Deletes all of `ownedCardIDs` or, on failure, none of them. IDs that aren't stored are ignored.
     func delete(ownedCardIDs: [OwnedCard.ID]) async throws
+    func deleteNewestCopy(of cardID: Card.ID) async throws
 }

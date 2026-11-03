@@ -121,6 +121,7 @@ struct LocalOwnedCardLoaderTests {
             case retrieveAll
             case insert([OwnedCard])
             case delete([OwnedCard.ID])
+            case deleteNewestCopy(Card.ID)
         }
 
         private(set) var messages = [Message]()
@@ -140,6 +141,11 @@ struct LocalOwnedCardLoaderTests {
 
         func delete(ownedCardIDs: [OwnedCard.ID]) async throws {
             messages.append(.delete(ownedCardIDs))
+            try deletionResult.get()
+        }
+
+        func deleteNewestCopy(of cardID: Card.ID) async throws {
+            messages.append(.deleteNewestCopy(cardID))
             try deletionResult.get()
         }
     }
