@@ -32,13 +32,23 @@ struct CardDetailUIComposerTests {
         #expect(collection.ownedCards.map(\.card) == [card])
     }
 
+    @Test func removeFromCollection_removesNewestCopyFromCollection() async {
+        let collection = CollectionStub(ownedCards: [OwnedCard(card: makeCard(id: 7)), OwnedCard(card: makeCard(id: 7))])
+        let oldest = collection.ownedCards[0]
+        let sut = CardDetailUIComposer.makeOwnership(of: 7, in: collection)
+
+        await sut.removeFromCollection.removeNewestCopy(of: 7)
+
+        #expect(collection.ownedCards == [oldest])
+    }
+
     // MARK: - Helpers
     private func makeCard(id: Int) -> Card {
         Card(id: id, name: "card \(id)")
     }
 
     @MainActor
-    private final class CollectionStub: OwnedCardCopyCounter, OwnedCardChangeObserver, OwnedCardAdder {
+    private final class CollectionStub: OwnedCardCopyCounter, OwnedCardChangeObserver, OwnedCardAdder, OwnedCardRemover {
         private(set) var ownedCards: [OwnedCard]
 
         init(ownedCards: [OwnedCard] = []) {
@@ -55,6 +65,15 @@ struct CardDetailUIComposerTests {
 
         func addCopies(of card: Card, count: Int) async throws {
             ownedCards += (1...count).map { _ in OwnedCard(card: card) }
+        }
+
+        func removeNewestCopy(of cardID: Card.ID) async throws {
+            guard let newest = ownedCards.lastIndex(where: { $0.card.id == cardID }) else { return }
+            ownedCards.remove(at: newest)
+        }
+
+        func remove(ownedCardIDs: [OwnedCard.ID]) async throws {
+            ownedCards.removeAll { ownedCardIDs.contains($0.id) }
         }
     }
 }

@@ -42,7 +42,12 @@ struct CardDetailContent: View {
             header
             CardPriceSection(viewModel: priceViewModel)
             if let ownership {
-                CardOwnershipSection(copies: ownership.copies, addControls: ownership.addToCollection.controls(for: viewModel.card.card))
+                CardOwnershipSection(
+                    copies: ownership.copies,
+                    addControls: ownership.addToCollection.controls(for: viewModel.card.card),
+                    removeStatus: ownership.removeFromCollection.status,
+                    removeCopy: { Task { await ownership.removeFromCollection.removeNewestCopy(of: viewModel.card.card.id) } }
+                )
             }
             detailsSection
         }
@@ -269,7 +274,7 @@ private nonisolated struct PreviewPriceHistoryLoader: CardPriceHistoryLoader {
     }
 }
 
-private final class PreviewCollection: OwnedCardCopyCounter, OwnedCardChangeObserver, OwnedCardAdder {
+private final class PreviewCollection: OwnedCardCopyCounter, OwnedCardChangeObserver, OwnedCardAdder, OwnedCardRemover {
     private var ownedCards: [OwnedCard]
     private let (changeStream, changeContinuation) = AsyncStream.makeStream(of: Void.self)
 
@@ -287,6 +292,17 @@ private final class PreviewCollection: OwnedCardCopyCounter, OwnedCardChangeObse
 
     func addCopies(of card: Card, count: Int) async throws {
         ownedCards += (1...count).map { _ in OwnedCard(card: card) }
+        changeContinuation.yield()
+    }
+
+    func removeNewestCopy(of cardID: Card.ID) async throws {
+        guard let newest = ownedCards.lastIndex(where: { $0.card.id == cardID }) else { return }
+        ownedCards.remove(at: newest)
+        changeContinuation.yield()
+    }
+
+    func remove(ownedCardIDs: [OwnedCard.ID]) async throws {
+        ownedCards.removeAll { ownedCardIDs.contains($0.id) }
         changeContinuation.yield()
     }
 }
