@@ -76,6 +76,11 @@ struct TCGCollectApp: App {
             }
             .environment(\.imageLoader, imageLoader)
             .task { await backendWakeUp?.wakeUp() }
+            .task {
+                if let ownedCardCollection, let ownedCardsSearch {
+                    await ownedCardsSearch.refresh(onEachOf: ownedCardCollection.changes())
+                }
+            }
             #if DEBUG
             .task {
                 if SampleCards.isOn, let ownedCardCollection {
@@ -96,8 +101,8 @@ struct TCGCollectApp: App {
     }
 
     private var makeSearchAddToCollection: (() -> AddToCollectionViewModel)? {
-        guard let ownedCardCollection, let ownedCardsSearch else { return nil }
-        return { CardSearchUIComposer.makeAddToCollection(saving: ownedCardCollection, refreshing: ownedCardsSearch) }
+        guard let ownedCardCollection else { return nil }
+        return { AddToCollectionViewModel(saver: ownedCardCollection) }
     }
 
     /// nil when the backend isn't configured, e.g. in Release builds for now.
