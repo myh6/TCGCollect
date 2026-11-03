@@ -61,6 +61,12 @@ extension SwiftDataStoreFileTests {
             #expect(try await makeSUT().load() == [oldest])
         }
 
+        @Test func makeLocalOwnedCardCollection_countsCopiesSavedByAnotherCollection() async throws {
+            try await makeSUT().save([makeOwnedCard(cardID: 1), makeOwnedCard(cardID: 2), makeOwnedCard(cardID: 1)])
+
+            #expect(try await makeSUT().countCopies(of: 1) == 2)
+        }
+
         @Test func makeOwnedCardSearcher_findsOwnedCardsSavedInCollection() async throws {
             let luffy = makeOwnedCard(cardID: 1, name: "Monkey D. Luffy")
             let collection = try makeSUT()

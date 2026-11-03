@@ -55,6 +55,30 @@ struct LocalOwnedCardLoaderTests {
         #expect(ownedCards == storedCards)
     }
 
+    @Test func countCopies_requestsCopiesOfCardFromStore() async {
+        let (sut, store) = makeSUT()
+
+        _ = try? await sut.countCopies(of: 7)
+
+        #expect(store.messages == [.countCopies(7)])
+    }
+
+    @Test func countCopies_failsOnStoreError() async {
+        let (sut, store) = makeSUT()
+        store.countResult = .failure(anyNSError())
+
+        await #expect(throws: LocalOwnedCardLoader.LoadError.failed) {
+            try await sut.countCopies(of: 7)
+        }
+    }
+
+    @Test func countCopies_deliversStoreCount() async throws {
+        let (sut, store) = makeSUT()
+        store.countResult = .success(3)
+
+        #expect(try await sut.countCopies(of: 7) == 3)
+    }
+
     @Test func save_insertsOwnedCardsIntoStoreAsOneBatch() async {
         let ownedCards = [makeOwnedCard(cardID: 1), makeOwnedCard(cardID: 1), makeOwnedCard(cardID: 2)]
         let (sut, store) = makeSUT()
