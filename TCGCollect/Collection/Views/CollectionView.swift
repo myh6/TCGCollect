@@ -16,7 +16,7 @@ struct CollectionView: View {
         content
             .navigationTitle("Collection")
             // Each time the tab appears, so cards added in chat show up.
-            .task { await viewModel.load() }
+            .task { await viewModel.start() }
     }
 
     @ViewBuilder
@@ -108,7 +108,7 @@ struct CollectionUnavailableView: View {
 
 #if DEBUG
 /// Answers previews with a fixed result, or never answers when `result` is nil.
-private nonisolated struct PreviewLoader: OwnedCardLoader {
+private nonisolated struct PreviewLoader: OwnedCardLoader, OwnedCardChangeObserver {
     let result: Result<[OwnedCard], Error>?
 
     func load() async throws -> [OwnedCard] {
@@ -117,6 +117,10 @@ private nonisolated struct PreviewLoader: OwnedCardLoader {
             throw CancellationError()
         }
         return try result.get()
+    }
+
+    func changes() -> AsyncStream<Void> {
+        AsyncStream { _ in }
     }
 }
 
@@ -128,6 +132,12 @@ private nonisolated struct PreviewValueLoader: CollectionValueHistoryLoader {
         }
         return CollectionValueHistory(currentTotal: points.last?.value, points: points)
     }
+}
+
+@MainActor
+private func previewCollectionViewModel(_ result: Result<[OwnedCard], Error>?) -> CollectionViewModel {
+    let collection = PreviewLoader(result: result)
+    return CollectionViewModel(loader: collection, observer: collection)
 }
 
 /// Dummy cards, with and without number, rarity and image, to see every kind of tile.
@@ -143,7 +153,7 @@ private let previewOwnedCards = [
 #Preview("Cards") {
     NavigationStack {
         CollectionView(
-            viewModel: CollectionViewModel(loader: PreviewLoader(result: .success(previewOwnedCards))),
+            viewModel: previewCollectionViewModel(.success(previewOwnedCards)),
             valueViewModel: CollectionValueViewModel(loader: PreviewValueLoader())
         )
     }
@@ -151,19 +161,19 @@ private let previewOwnedCards = [
 
 #Preview("Empty") {
     NavigationStack {
-        CollectionView(viewModel: CollectionViewModel(loader: PreviewLoader(result: .success([]))), valueViewModel: nil)
+        CollectionView(viewModel: previewCollectionViewModel(.success([])), valueViewModel: nil)
     }
 }
 
 #Preview("Loading") {
     NavigationStack {
-        CollectionView(viewModel: CollectionViewModel(loader: PreviewLoader(result: nil)), valueViewModel: nil)
+        CollectionView(viewModel: previewCollectionViewModel(nil), valueViewModel: nil)
     }
 }
 
 #Preview("Failed") {
     NavigationStack {
-        CollectionView(viewModel: CollectionViewModel(loader: PreviewLoader(result: .failure(CancellationError()))), valueViewModel: nil)
+        CollectionView(viewModel: previewCollectionViewModel(.failure(CancellationError())), valueViewModel: nil)
     }
 }
 #endif

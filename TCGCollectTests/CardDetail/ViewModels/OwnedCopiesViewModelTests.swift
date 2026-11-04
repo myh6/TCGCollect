@@ -184,22 +184,4 @@ struct OwnedCopiesViewModelTests {
             try await call(with: cardID)
         }
     }
-
-    private final class ChangeObserverStub: OwnedCardChangeObserver {
-        private(set) var listenCount = 0
-        private let (stream, continuation) = AsyncStream.makeStream(of: Void.self)
-
-        func changes() -> AsyncStream<Void> {
-            listenCount += 1
-            return stream
-        }
-
-        func announceChange() {
-            continuation.yield()
-        }
-
-        func finish() {
-            continuation.finish()
-        }
-    }
 }

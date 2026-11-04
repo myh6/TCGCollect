@@ -34,7 +34,7 @@ struct TCGCollectApp: App {
         let collection = Self.makeOwnedCardCollection()
         _ownedCardCollection = State(initialValue: collection)
         _addToCollectionViewModel = State(initialValue: collection.map { AddToCollectionViewModel(adder: $0) })
-        _collectionViewModel = State(initialValue: collection.map { CollectionViewModel(loader: $0) })
+        _collectionViewModel = State(initialValue: collection.map { CollectionViewModel(loader: $0, observer: $0) })
         _ownedCardsSearch = State(initialValue: collection.map {
             CardSearchUIComposer.makeOwnedCardsSection(searching: OwnedCardComposer.makeOwnedCardSearcher(searching: $0))
         })
