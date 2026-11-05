@@ -16,6 +16,14 @@ public enum CatalogComposer {
         )
     }
 
+    public static func makeRemoteCardSetsLoader(baseURL: URL, apiKey: String, session: URLSession? = nil) -> CardSetsLoader {
+        RemoteLoader(
+            client: makeClient(apiKey: apiKey, session: session),
+            makeRequest: { gameSlug in CatalogEndpoint.sets(gameSlug: gameSlug).urlRequest(baseURL: baseURL) },
+            map: CardSetsResponseMapper.map
+        )
+    }
+
     private static func makeClient(apiKey: String, session: URLSession?) -> NetworkClient {
         BackendClient.make(apiKey: apiKey, session: session ?? URLSession(configuration: .default))
     }

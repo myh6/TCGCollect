@@ -93,8 +93,4 @@ struct CollectionValueResponseMapperTests {
     private func dollars(_ amount: String) -> Money {
         Money(amount: Decimal(string: amount)!, currencyCode: "USD")
     }
-
-    private func startOfDay(_ year: Int, _ month: Int, _ day: Int) -> Date {
-        Calendar.current.date(from: DateComponents(year: year, month: month, day: day))!
-    }
 }

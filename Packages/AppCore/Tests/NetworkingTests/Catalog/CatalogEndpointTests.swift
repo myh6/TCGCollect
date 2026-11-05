@@ -43,5 +43,6 @@ struct CatalogEndpointTests {
 
     static let endpoints = [
         Endpoint(path: "v1/catalog/games") { CatalogEndpoint.games.urlRequest(baseURL: $0) },
+        Endpoint(path: "v1/catalog/games/a-game/sets") { CatalogEndpoint.sets(gameSlug: "a-game").urlRequest(baseURL: $0) },
     ]
 }
