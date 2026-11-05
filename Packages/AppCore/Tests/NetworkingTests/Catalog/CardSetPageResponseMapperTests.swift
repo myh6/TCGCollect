@@ -42,7 +42,6 @@ struct CardSetPageResponseMapperTests {
         #expect(page == CardSetPage(cards: [card0.result, card1.result], totalCount: 156))
     }
 
-    // A card the backend has no price for yet is still part of the set.
     @Test func map_deliversCardWithoutPriceWhenPriceValuesAreNull() throws {
         var card = makeRemoteCard(id: 0, name: "a card")
         for key in ["current_price", "currency", "current_fetched_at"] {

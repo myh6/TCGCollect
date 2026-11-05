@@ -26,7 +26,6 @@ struct TCGCollectApp: App {
     // Owned here so the results stay on screen after switching tabs.
     @State private var ownedCardsSearch: SearchSectionViewModel<OwnedCardGroup>?
     @State private var onlineCardsSearch = Self.makeOnlineCardsSearch()
-    // Owned here so the games stay loaded after switching tabs.
     @State private var catalogGames: CatalogListViewModel<CardGame>?
     private let catalogLoaders: CatalogLoaders?
     private let cardDetailsLoader = Self.makeCardDetailsLoader()

@@ -194,7 +194,6 @@ struct CardSetViewModelTests {
         #expect(loader.inputs.isEmpty)
     }
 
-    // The set can shrink between pages; an empty page means there's nothing more to load.
     @Test func loadMore_stopsWhenPageIsEmpty() async {
         let (sut, loader) = makeSUT()
         await loadFirstPage(sut, loader: loader, completingWith: .success(makePage(ids: [1], total: 2)))
@@ -204,7 +203,6 @@ struct CardSetViewModelTests {
         #expect(sut.hasMore == false)
     }
 
-    // The set can change between pages, which can shift a card already shown onto the next page.
     @Test func loadMore_skipsCardsAlreadyShown() async {
         let (sut, loader) = makeSUT()
         await loadFirstPage(sut, loader: loader, completingWith: .success(makePage(ids: [1, 2], total: 4)))

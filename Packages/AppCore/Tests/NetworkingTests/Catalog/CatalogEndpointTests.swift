@@ -33,7 +33,6 @@ struct CatalogEndpointTests {
         #expect(received.httpBody == nil)
     }
 
-    // Sent explicitly, so the page size doesn't change if the backend's default does.
     @Test func cards_sendsLimitOfFiftyByDefault() {
         let received = CatalogEndpoint.cards(setID: 1, offset: 0).urlRequest(baseURL: URL(string: "http://base-url.com")!)
 

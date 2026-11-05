@@ -23,7 +23,6 @@ struct CardSetScreen: View {
 struct CardSetView: View {
     let viewModel: CardSetViewModel
 
-    // As many columns as fit, each at least as wide as a tile.
     private let columns = [GridItem(.adaptive(minimum: 104), spacing: 12, alignment: .top)]
 
     var body: some View {
@@ -59,7 +58,6 @@ struct CardSetView: View {
                 switch viewModel.more {
                 case .idle, .loading:
                     ProgressView()
-                        // Again after each page, in case the end of the grid is still on screen.
                         .task(id: count) { await viewModel.loadMore() }
                 case .failed:
                     VStack(spacing: 8) {
