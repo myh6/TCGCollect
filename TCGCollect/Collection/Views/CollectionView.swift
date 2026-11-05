@@ -11,12 +11,21 @@ import AppCore
 struct CollectionView: View {
     let viewModel: CollectionViewModel
     let valueViewModel: CollectionValueViewModel?
+    let editViewModel: CollectionEditViewModel?
 
     var body: some View {
         content
             .navigationTitle("Collection")
+            .toolbar {
+                if let editViewModel, editViewModel.isEditing {
+                    ToolbarItem(placement: .confirmationAction) {
+                        Button("Done", action: editViewModel.stopEditing)
+                    }
+                }
+            }
             // Each time the tab appears, so cards added in chat show up.
             .task { await viewModel.start() }
+            .onDisappear { editViewModel?.stopEditing() }
     }
 
     @ViewBuilder
@@ -31,8 +40,9 @@ struct CollectionView: View {
                     systemImage: "rectangle.stack",
                     description: Text("Cards you add from Chat show up here.")
                 )
+                .onAppear { editViewModel?.stopEditing() }
             } else {
-                OwnedCardsGrid(cards: ownedCards.map(OwnedCardPresentation.init)) {
+                OwnedCardsGrid(cards: ownedCards.map(OwnedCardPresentation.init), editing: editViewModel) {
                     if let valueViewModel {
                         CollectionValueSection(viewModel: valueViewModel, ownedCards: ownedCards)
                     }
@@ -50,6 +60,7 @@ struct CollectionView: View {
 
 struct OwnedCardsGrid<Header: View>: View {
     let cards: [OwnedCardPresentation]
+    let editing: CollectionEditViewModel?
     @ViewBuilder let header: Header
 
     // As many columns as fit, each at least as wide as a tile.
@@ -61,10 +72,22 @@ struct OwnedCardsGrid<Header: View>: View {
                 header
                 LazyVGrid(columns: columns, spacing: 16) {
                     ForEach(cards) { card in
-                        NavigationLink(value: card.card) {
-                            OwnedCardTile(card: card)
+                        if let editing, editing.isEditing {
+                            EditableOwnedCardTile(
+                                card: card,
+                                isRemoving: editing.removingCopies.contains(card.id),
+                                didFailToRemove: editing.failedCopy == card.id,
+                                remove: { Task { await editing.remove(card.id) } }
+                            )
+                        } else {
+                            NavigationLink(value: card.card) {
+                                OwnedCardTile(card: card)
+                            }
+                            .buttonStyle(.plain)
+                            .highPriorityGesture(LongPressGesture(minimumDuration: 0.5).onEnded { _ in
+                                editing?.startEditing()
+                            })
                         }
-                        .buttonStyle(.plain)
                     }
                 }
             }
@@ -124,6 +147,12 @@ private nonisolated struct PreviewLoader: OwnedCardLoader, OwnedCardChangeObserv
     }
 }
 
+private nonisolated struct PreviewRemover: OwnedCardRemover {
+    func remove(ownedCardIDs: [OwnedCard.ID]) async throws {}
+
+    func removeNewestCopy(of cardID: Card.ID) async throws {}
+}
+
 private nonisolated struct PreviewValueLoader: CollectionValueHistoryLoader {
     func loadValueHistory(of quantities: [Card.ID: Int], days: Int?) async throws -> CollectionValueHistory {
         let values: [Decimal] = [118.4, 121.0, 119.75, 124.3, 126.1, 125.5, 129.8]
@@ -154,26 +183,27 @@ private let previewOwnedCards = [
     NavigationStack {
         CollectionView(
             viewModel: previewCollectionViewModel(.success(previewOwnedCards)),
-            valueViewModel: CollectionValueViewModel(loader: PreviewValueLoader())
+            valueViewModel: CollectionValueViewModel(loader: PreviewValueLoader()),
+            editViewModel: CollectionEditViewModel(remover: PreviewRemover())
         )
     }
 }
 
 #Preview("Empty") {
     NavigationStack {
-        CollectionView(viewModel: previewCollectionViewModel(.success([])), valueViewModel: nil)
+        CollectionView(viewModel: previewCollectionViewModel(.success([])), valueViewModel: nil, editViewModel: nil)
     }
 }
 
 #Preview("Loading") {
     NavigationStack {
-        CollectionView(viewModel: previewCollectionViewModel(nil), valueViewModel: nil)
+        CollectionView(viewModel: previewCollectionViewModel(nil), valueViewModel: nil, editViewModel: nil)
     }
 }
 
 #Preview("Failed") {
     NavigationStack {
-        CollectionView(viewModel: previewCollectionViewModel(.failure(CancellationError())), valueViewModel: nil)
+        CollectionView(viewModel: previewCollectionViewModel(.failure(CancellationError())), valueViewModel: nil, editViewModel: nil)
     }
 }
 #endif
