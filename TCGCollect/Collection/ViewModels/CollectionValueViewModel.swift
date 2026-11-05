@@ -28,6 +28,7 @@ final class CollectionValueViewModel {
 
     private(set) var range = Range.month
     private(set) var valueHistory = LoadingState<CollectionValueHistory>.idle
+    private(set) var isReloading = false
 
     private var ownedCards = [OwnedCard]()
     private let loader: CollectionValueHistoryLoader
@@ -57,7 +58,11 @@ final class CollectionValueViewModel {
             valueHistory = .loaded(CollectionValueHistory(currentTotal: nil, points: []))
             return
         }
-        valueHistory = .loading
+        if case .loaded = valueHistory {
+            isReloading = true
+        } else {
+            valueHistory = .loading
+        }
         do {
             let history = try await loader.loadValueHistory(of: quantities, days: range.days)
             guard request == latestRequest else { return }
@@ -66,5 +71,6 @@ final class CollectionValueViewModel {
             guard request == latestRequest else { return }
             valueHistory = .failed
         }
+        isReloading = false
     }
 }

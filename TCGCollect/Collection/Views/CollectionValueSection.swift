@@ -49,6 +49,13 @@ struct CollectionValueSection: View {
             }
         case .loaded(let history):
             PriceHistoryView(history: PriceHistoryPresentation(history), label: "Collection value", changePeriod: viewModel.range.changePeriod)
+                .opacity(viewModel.isReloading ? 0.4 : 1)
+                .overlay {
+                    if viewModel.isReloading {
+                        ProgressView()
+                    }
+                }
+                .animation(.easeInOut(duration: 0.2), value: viewModel.isReloading)
         }
     }
 }

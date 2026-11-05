@@ -153,6 +153,59 @@ struct CollectionValueViewModelTests {
         #expect(sut.valueHistory == .loaded(weekHistory))
     }
 
+    @Test func load_keepsShowingValueWhileReloadingForChangedCards() async {
+        let before = makeHistory(dollars: 10)
+        let after = makeHistory(dollars: 4)
+        let (sut, loader) = makeSUT()
+        await load(sut, owned(luffy, zoro), loader: loader, completingWith: .success(before))
+
+        let reloading = Task { await sut.load(owned(luffy)) }
+        await loader.waitForCall(at: 1)
+        #expect(sut.valueHistory == .loaded(before))
+        #expect(sut.isReloading)
+
+        loader.complete(with: .success(after), at: 1)
+        await reloading.value
+        #expect(sut.valueHistory == .loaded(after))
+        #expect(!sut.isReloading)
+    }
+
+    @Test func select_keepsShowingValueWhileLoadingNewRange() async {
+        let monthHistory = makeHistory(dollars: 10)
+        let (sut, loader) = makeSUT()
+        await load(sut, owned(luffy), loader: loader, completingWith: .success(monthHistory))
+
+        let selecting = Task { await sut.select(.week) }
+        await loader.waitForCall(at: 1)
+        #expect(sut.valueHistory == .loaded(monthHistory))
+        #expect(sut.isReloading)
+
+        loader.complete(with: .success(anyHistory()), at: 1)
+        await selecting.value
+        #expect(!sut.isReloading)
+    }
+
+    @Test func load_failsWhenReloadFails() async {
+        let (sut, loader) = makeSUT()
+        await load(sut, owned(luffy, zoro), loader: loader, completingWith: .success(makeHistory(dollars: 10)))
+        loader.setCompletionForNewCalls(to: .failure(anyError()))
+
+        await sut.load(owned(luffy))
+
+        #expect(sut.valueHistory == .failed)
+        #expect(!sut.isReloading)
+    }
+
+    @Test func load_isNotReloadingDuringFirstLoad() async {
+        let (sut, loader) = makeSUT()
+
+        let loading = await startLoading(sut, owned(luffy), loader: loader)
+        #expect(!sut.isReloading)
+
+        loader.complete(with: .success(anyHistory()))
+        await loading.value
+    }
+
     // MARK: - Helpers
     private struct ValueRequest: Equatable {
         let quantities: [Card.ID: Int]
