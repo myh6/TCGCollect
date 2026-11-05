@@ -12,11 +12,14 @@ import AppCore
 
 struct CardSetPresentationTests {
 
-    @Test func init_usesSetIDAndName() {
-        let sut = CardSetPresentation(makeSet(id: 7, name: "Romance Dawn"), locale: enUS)
+    @Test func init_usesSetIDNameAndIconURL() {
+        let iconURL = URL(string: "https://an-icon.com/set.png")!
+
+        let sut = CardSetPresentation(makeSet(id: 7, name: "Romance Dawn", iconURL: iconURL), locale: enUS)
 
         #expect(sut.id == 7)
         #expect(sut.name == "Romance Dawn")
+        #expect(sut.iconURL == iconURL)
     }
 
     @Test func init_keepsSetToOpen() {
@@ -45,7 +48,7 @@ struct CardSetPresentationTests {
     // MARK: - Helpers
     private let enUS = Locale(identifier: "en_US")
 
-    private func makeSet(id: Int = 1, name: String = "a set", cardCount: Int = 1, releaseDate: Date? = nil) -> CardSet {
-        CardSet(id: id, name: name, cardCount: cardCount, releaseDate: releaseDate, iconURL: nil)
+    private func makeSet(id: Int = 1, name: String = "a set", cardCount: Int = 1, releaseDate: Date? = nil, iconURL: URL? = nil) -> CardSet {
+        CardSet(id: id, name: name, cardCount: cardCount, releaseDate: releaseDate, iconURL: iconURL)
     }
 }

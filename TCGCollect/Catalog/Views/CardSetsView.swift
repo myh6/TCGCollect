@@ -33,18 +33,34 @@ struct CardSetsView: View {
             } else {
                 List(sets.map { CardSetPresentation($0) }) { set in
                     NavigationLink(value: set.set) {
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text(set.name)
-                            Text(set.details)
-                                .font(.subheadline)
-                                .foregroundStyle(.secondary)
-                        }
+                        CardSetRow(set: set)
                     }
                 }
             }
         }
         .navigationTitle(title)
         .task { await viewModel.load() }
+    }
+}
+
+struct CardSetRow: View {
+    let set: CardSetPresentation
+
+    private static var iconSize: CGSize { CGSize(width: 72, height: 48) }
+
+    var body: some View {
+        HStack(spacing: 12) {
+            CardImageView(url: set.iconURL)
+                .frame(width: Self.iconSize.width, height: Self.iconSize.height)
+                .clipShape(RoundedRectangle(cornerRadius: 6))
+            VStack(alignment: .leading, spacing: 2) {
+                Text(set.name)
+                Text(set.details)
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .accessibilityElement(children: .combine)
     }
 }
 
