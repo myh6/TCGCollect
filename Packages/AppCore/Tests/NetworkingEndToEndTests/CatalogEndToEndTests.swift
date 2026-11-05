@@ -33,6 +33,13 @@ struct CatalogEndToEndTests {
         #expect(releaseDates == releaseDates.sorted(by: >))
     }
 
+    @Test func loadSets_deliversIconOfTheSetFromBackend() async throws {
+        let sets = try await makeSetsLoader().loadSets(ofGame: onePieceSlug)
+
+        let romanceDawn = try #require(sets.first { $0.id == romanceDawnSetID })
+        #expect(romanceDawn.iconURL?.scheme == "https")
+    }
+
     @Test func loadSets_deliversCardCountMatchingTheSetsCards() async throws {
         let sets = try await makeSetsLoader().loadSets(ofGame: onePieceSlug)
         let romanceDawn = try #require(sets.first { $0.id == romanceDawnSetID })
