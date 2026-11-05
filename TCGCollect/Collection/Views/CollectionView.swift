@@ -100,21 +100,7 @@ struct OwnedCardTile: View {
     let card: OwnedCardPresentation
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            CardImageView(url: card.imageURL)
-                // A trading card's 63 × 88 mm shape, filling the column's width.
-                .aspectRatio(63.0 / 88.0, contentMode: .fit)
-                .clipShape(RoundedRectangle(cornerRadius: 6))
-            Text(card.name)
-                .font(.caption.weight(.semibold))
-                .lineLimit(2)
-            if let details = card.details {
-                Text(details)
-                    .font(.caption2)
-                    .foregroundStyle(.secondary)
-            }
-        }
-        .accessibilityElement(children: .combine)
+        CardTile(name: card.name, details: card.details, imageURL: card.imageURL)
     }
 }
 
