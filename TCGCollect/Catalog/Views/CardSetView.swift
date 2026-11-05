@@ -96,13 +96,13 @@ private nonisolated struct PreviewPageLoader: CardSetPageLoader {
 
 #Preview("Cards") {
     NavigationStack {
-        CardSetScreen(set: CardSet(id: 1, name: "Romance Dawn", cardCount: 40, releaseDate: nil), loader: PreviewPageLoader(totalCount: 40))
+        CardSetScreen(set: CardSet(id: 1, name: "Romance Dawn", cardCount: 40, releaseDate: nil, iconURL: nil), loader: PreviewPageLoader(totalCount: 40))
     }
 }
 
 #Preview("Empty") {
     NavigationStack {
-        CardSetScreen(set: CardSet(id: 1, name: "Romance Dawn", cardCount: 0, releaseDate: nil), loader: PreviewPageLoader(totalCount: 0))
+        CardSetScreen(set: CardSet(id: 1, name: "Romance Dawn", cardCount: 0, releaseDate: nil, iconURL: nil), loader: PreviewPageLoader(totalCount: 0))
     }
 }
 #endif

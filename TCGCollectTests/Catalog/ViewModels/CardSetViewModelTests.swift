@@ -222,7 +222,7 @@ struct CardSetViewModelTests {
     }
 
     private func makeSet(id: CardSet.ID) -> CardSet {
-        CardSet(id: id, name: "a set", cardCount: 3, releaseDate: nil)
+        CardSet(id: id, name: "a set", cardCount: 3, releaseDate: nil, iconURL: nil)
     }
 
     private func makeResults(ids: [Card.ID]) -> [CardSearchResult] {

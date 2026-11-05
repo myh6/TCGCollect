@@ -52,7 +52,7 @@ struct CatalogUnavailableView: View {
 #if DEBUG
 private nonisolated struct PreviewCatalogLoader: CardSetsLoader, CardSetPageLoader {
     func loadSets(ofGame gameSlug: String) async throws -> [CardSet] {
-        [CardSet(id: 1, name: "Romance Dawn", cardCount: 156, releaseDate: .now)]
+        [CardSet(id: 1, name: "Romance Dawn", cardCount: 156, releaseDate: .now, iconURL: nil)]
     }
 
     func loadCards(inSet setID: CardSet.ID, offset: Int) async throws -> CardSetPage {

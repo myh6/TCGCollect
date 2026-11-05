@@ -26,9 +26,16 @@ enum CardSetsResponseMapper {
         let name: String
         let card_count: Int
         let released_on: String?
+        let set_icon_url: String?
 
         var set: CardSet {
-            CardSet(id: set_id, name: name, cardCount: card_count, releaseDate: released_on.flatMap(RemoteDay.startOfDay))
+            CardSet(
+                id: set_id,
+                name: name,
+                cardCount: card_count,
+                releaseDate: released_on.flatMap(RemoteDay.startOfDay),
+                iconURL: set_icon_url.flatMap(URL.init(string:))
+            )
         }
     }
 }

@@ -12,11 +12,13 @@ public struct CardSet: Identifiable, Hashable, Sendable {
     public let name: String
     public let cardCount: Int
     public let releaseDate: Date?
+    public let iconURL: URL?
 
-    public init(id: Int, name: String, cardCount: Int, releaseDate: Date?) {
+    public init(id: Int, name: String, cardCount: Int, releaseDate: Date?, iconURL: URL?) {
         self.id = id
         self.name = name
         self.cardCount = cardCount
         self.releaseDate = releaseDate
+        self.iconURL = iconURL
     }
 }

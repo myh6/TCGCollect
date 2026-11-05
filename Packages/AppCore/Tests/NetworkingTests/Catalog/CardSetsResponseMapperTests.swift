@@ -33,21 +33,37 @@ struct CardSetsResponseMapperTests {
 
     @Test func map_deliversSetsInBackendOrderWithReleaseDayInLocalTime() throws {
         let sets = try map([
-            makeSet(id: 2, name: "Paramount War", cardCount: 121, releasedOn: "2023-03-10"),
-            makeSet(id: 1, name: "Romance Dawn", cardCount: 156, releasedOn: "2022-12-02"),
+            makeSet(id: 2, name: "Paramount War", cardCount: 121, releasedOn: "2023-03-10", iconURL: "https://an-icon.com/war.png"),
+            makeSet(id: 1, name: "Romance Dawn", cardCount: 156, releasedOn: "2022-12-02", iconURL: "https://an-icon.com/dawn.png"),
         ])
 
         #expect(sets == [
-            CardSet(id: 2, name: "Paramount War", cardCount: 121, releaseDate: startOfDay(2023, 3, 10)),
-            CardSet(id: 1, name: "Romance Dawn", cardCount: 156, releaseDate: startOfDay(2022, 12, 2)),
+            CardSet(id: 2, name: "Paramount War", cardCount: 121, releaseDate: startOfDay(2023, 3, 10), iconURL: URL(string: "https://an-icon.com/war.png")),
+            CardSet(id: 1, name: "Romance Dawn", cardCount: 156, releaseDate: startOfDay(2022, 12, 2), iconURL: URL(string: "https://an-icon.com/dawn.png")),
         ])
+    }
+
+    @Test(arguments: [nil, ""] as [String?])
+    func map_deliversSetWithoutIconWhenItIsNullOrEmpty(iconURL: String?) throws {
+        let sets = try map([makeSet(id: 1, name: "a set", cardCount: 1, releasedOn: nil, iconURL: iconURL)])
+
+        #expect(sets.map(\.iconURL) == [nil])
+    }
+
+    @Test func map_deliversSetWithoutIconWhenBackendDoesNotSendIt() throws {
+        var set = makeSet(id: 1, name: "a set", cardCount: 1, releasedOn: nil)
+        set["set_icon_url"] = nil
+
+        let sets = try map([set])
+
+        #expect(sets.map(\.iconURL) == [nil])
     }
 
     @Test(arguments: [nil, "not a date", "2022-12-02T00:00:00+00:00"] as [String?])
     func map_deliversSetWithoutReleaseDateWhenItIsMissingOrInvalid(releasedOn: String?) throws {
         let sets = try map([makeSet(id: 1, name: "a set", cardCount: 1, releasedOn: releasedOn)])
 
-        #expect(sets == [CardSet(id: 1, name: "a set", cardCount: 1, releaseDate: nil)])
+        #expect(sets == [CardSet(id: 1, name: "a set", cardCount: 1, releaseDate: nil, iconURL: nil)])
     }
 
     @Test(arguments: [
@@ -71,8 +87,15 @@ struct CardSetsResponseMapperTests {
         try CardSetsResponseMapper.map(makeJSON(sets), from: httpResponse(statusCode: 200))
     }
 
-    private func makeSet(id: Int, name: String, cardCount: Int, releasedOn: String?) -> [String: Any] {
-        ["set_id": id, "name": name, "code": NSNull(), "card_count": cardCount, "released_on": releasedOn ?? NSNull()]
+    private func makeSet(id: Int, name: String, cardCount: Int, releasedOn: String?, iconURL: String? = nil) -> [String: Any] {
+        [
+            "set_id": id,
+            "name": name,
+            "code": NSNull(),
+            "card_count": cardCount,
+            "released_on": releasedOn ?? NSNull(),
+            "set_icon_url": iconURL ?? NSNull(),
+        ]
     }
 
     private func makeJSON(_ sets: [[String: Any]]) -> Data {

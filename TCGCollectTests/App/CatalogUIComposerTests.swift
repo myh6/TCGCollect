@@ -32,7 +32,7 @@ struct CatalogUIComposerTests {
     }
 
     @Test func setsList_deliversSetsFromLoader() async {
-        let sets = [CardSet(id: 1, name: "a set", cardCount: 1, releaseDate: nil)]
+        let sets = [CardSet(id: 1, name: "a set", cardCount: 1, releaseDate: nil, iconURL: nil)]
         let sut = CatalogUIComposer.makeSetsList(of: CardGame(slug: "a-game", name: "A Game"), loader: CatalogLoaderStub(sets: sets))
 
         await sut.load()

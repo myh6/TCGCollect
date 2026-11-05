@@ -47,7 +47,7 @@ struct CatalogComposerTests {
         let session = Stub.makeSession(replyingWith: makeJSON([set]))
         let sut = CatalogComposer.makeRemoteCardSetsLoader(baseURL: anyBaseURL(), apiKey: "an api key", session: session)
 
-        #expect(try await sut.loadSets(ofGame: "a-game") == [CardSet(id: 1, name: "A Set", cardCount: 3, releaseDate: nil)])
+        #expect(try await sut.loadSets(ofGame: "a-game") == [CardSet(id: 1, name: "A Set", cardCount: 3, releaseDate: nil, iconURL: nil)])
     }
 
     @Test func makeRemoteCardSetPageLoader_requestsPageOfSetWithAPIKeyFromBaseURL() async throws {

@@ -46,6 +46,6 @@ struct CardSetPresentationTests {
     private let enUS = Locale(identifier: "en_US")
 
     private func makeSet(id: Int = 1, name: String = "a set", cardCount: Int = 1, releaseDate: Date? = nil) -> CardSet {
-        CardSet(id: id, name: name, cardCount: cardCount, releaseDate: releaseDate)
+        CardSet(id: id, name: name, cardCount: cardCount, releaseDate: releaseDate, iconURL: nil)
     }
 }

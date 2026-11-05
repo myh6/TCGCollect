@@ -59,9 +59,9 @@ private func previewCardSetsView(_ load: @escaping () async throws -> [CardSet])
 #Preview("Sets") {
     previewCardSetsView {
         [
-            CardSet(id: 3, name: "Starter Deck 21: EX - Gear 5", cardCount: 17, releaseDate: .now),
-            CardSet(id: 2, name: "Paramount War", cardCount: 121, releaseDate: .now.addingTimeInterval(-86_400 * 600)),
-            CardSet(id: 1, name: "Romance Dawn", cardCount: 156, releaseDate: nil),
+            CardSet(id: 3, name: "Starter Deck 21: EX - Gear 5", cardCount: 17, releaseDate: .now, iconURL: nil),
+            CardSet(id: 2, name: "Paramount War", cardCount: 121, releaseDate: .now.addingTimeInterval(-86_400 * 600), iconURL: nil),
+            CardSet(id: 1, name: "Romance Dawn", cardCount: 156, releaseDate: nil, iconURL: nil),
         ]
     }
 }
