@@ -10,13 +10,14 @@ import Domain
 
 /// The owned cards kept on this device. Store errors become this type's own errors,
 /// so callers never depend on how the store keeps them.
-public struct LocalOwnedCardLoader: OwnedCardLoader, OwnedCardSaver, OwnedCardRemover {
+public struct LocalOwnedCardLoader: OwnedCardLoader, OwnedCardCopyCounter, OwnedCardAdder, OwnedCardRemover, OwnedCardChangeObserver {
     public enum LoadError: Error, Equatable {
         case failed
     }
 
     public enum SaveError: Error, Equatable {
         case failed
+        case invalidCopyCount
     }
 
     public enum RemoveError: Error, Equatable {
@@ -24,9 +25,14 @@ public struct LocalOwnedCardLoader: OwnedCardLoader, OwnedCardSaver, OwnedCardRe
     }
 
     private let store: OwnedCardStore
+    private let broadcaster = OwnedCardChangeBroadcaster()
 
     public init(store: OwnedCardStore) {
         self.store = store
+    }
+
+    public func changes() -> AsyncStream<Void> {
+        broadcaster.changes()
     }
 
     public func load() async throws -> [OwnedCard] {
@@ -37,19 +43,39 @@ public struct LocalOwnedCardLoader: OwnedCardLoader, OwnedCardSaver, OwnedCardRe
         }
     }
 
-    public func save(_ ownedCards: [OwnedCard]) async throws {
+    public func countCopies(of cardID: Card.ID) async throws -> Int {
         do {
-            try await store.insert(ownedCards)
+            return try await store.countCopies(of: cardID)
         } catch {
-            throw SaveError.failed
+            throw LoadError.failed
         }
     }
 
-    public func remove(ownedCardID: OwnedCard.ID) async throws {
+    public func addCopies(of card: Card, count: Int) async throws {
+        guard count >= 1 else { throw SaveError.invalidCopyCount }
         do {
-            try await store.delete(ownedCardID: ownedCardID)
+            try await store.insert((1...count).map { _ in OwnedCard(card: card) })
+        } catch {
+            throw SaveError.failed
+        }
+        broadcaster.announce()
+    }
+
+    public func remove(ownedCardIDs: [OwnedCard.ID]) async throws {
+        do {
+            try await store.delete(ownedCardIDs: ownedCardIDs)
         } catch {
             throw RemoveError.failed
         }
+        broadcaster.announce()
+    }
+
+    public func removeNewestCopy(of cardID: Card.ID) async throws {
+        do {
+            try await store.deleteNewestCopy(of: cardID)
+        } catch {
+            throw RemoveError.failed
+        }
+        broadcaster.announce()
     }
 }

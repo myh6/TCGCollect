@@ -11,6 +11,8 @@ import AppCore
 struct CardOwnershipSection: View {
     let copies: OwnedCopiesViewModel
     let addControls: AddToCollectionViewModel.Controls
+    let removeStatus: RemoveFromCollectionViewModel.Status
+    let removeCopy: () -> Void
 
     private static var controlWidth: CGFloat { 120 }
 
@@ -37,8 +39,16 @@ struct CardOwnershipSection: View {
     private var ownedCopies: some View {
         switch copies.copies {
         case .loaded(let count) where count > 0:
-            Label("You own ×\(count)", systemImage: "rectangle.stack.fill")
-                .font(.subheadline.weight(.semibold))
+            HStack(spacing: 8) {
+                Label("You own ×\(count)", systemImage: "rectangle.stack.fill")
+                    .font(.subheadline.weight(.semibold))
+                removeButton
+            }
+            if removeStatus == .failed {
+                Text("Couldn't remove a copy. Please try again.")
+                    .font(.caption)
+                    .foregroundStyle(.red)
+            }
         case .loaded:
             Text("Not in your collection yet")
                 .font(.subheadline)
@@ -46,5 +56,15 @@ struct CardOwnershipSection: View {
         case .idle, .loading, .failed:
             EmptyView()
         }
+    }
+
+    private var removeButton: some View {
+        Button(role: .destructive, action: removeCopy) {
+            Image(systemName: "minus.circle.fill")
+                .font(.title3)
+        }
+        .buttonStyle(.borderless)
+        .disabled(!removeStatus.canRemove)
+        .accessibilityLabel("Remove one copy")
     }
 }

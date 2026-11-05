@@ -56,6 +56,12 @@ final class SearchSectionViewModel<Item: Equatable> {
         guard let lastQuery else { return }
         await search(lastQuery)
     }
+
+    func refresh(onEachOf changes: AsyncStream<Void>) async {
+        for await _ in changes {
+            await refresh()
+        }
+    }
 }
 
 private extension SearchSectionViewModel.State {

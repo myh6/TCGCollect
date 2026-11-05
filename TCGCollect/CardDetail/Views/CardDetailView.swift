@@ -25,7 +25,7 @@ struct CardDetailView: View {
         .toolbarTitleDisplayMode(.inline)
         .task { await viewModel.loadDetails() }
         .task { await priceViewModel.load() }
-        .task { await ownership?.copies.load() }
+        .task { await ownership?.copies.start() }
     }
 }
 
@@ -42,7 +42,12 @@ struct CardDetailContent: View {
             header
             CardPriceSection(viewModel: priceViewModel)
             if let ownership {
-                CardOwnershipSection(copies: ownership.copies, addControls: ownership.addToCollection.controls(for: viewModel.card.card))
+                CardOwnershipSection(
+                    copies: ownership.copies,
+                    addControls: ownership.addToCollection.controls(for: viewModel.card.card),
+                    removeStatus: ownership.removeFromCollection.status,
+                    removeCopy: { Task { await ownership.removeFromCollection.removeNewestCopy(of: viewModel.card.card.id) } }
+                )
             }
             detailsSection
         }
@@ -269,19 +274,36 @@ private nonisolated struct PreviewPriceHistoryLoader: CardPriceHistoryLoader {
     }
 }
 
-private final class PreviewCollection: OwnedCardLoader, OwnedCardSaver {
+private final class PreviewCollection: OwnedCardCopyCounter, OwnedCardChangeObserver, OwnedCardAdder, OwnedCardRemover {
     private var ownedCards: [OwnedCard]
+    private let (changeStream, changeContinuation) = AsyncStream.makeStream(of: Void.self)
 
     init(cards: [Card]) {
         ownedCards = cards.map { OwnedCard(card: $0) }
     }
 
-    func load() async throws -> [OwnedCard] {
-        ownedCards
+    func countCopies(of cardID: Card.ID) async throws -> Int {
+        ownedCards.filter { $0.card.id == cardID }.count
     }
 
-    func save(_ newCards: [OwnedCard]) async throws {
-        ownedCards += newCards
+    func changes() -> AsyncStream<Void> {
+        changeStream
+    }
+
+    func addCopies(of card: Card, count: Int) async throws {
+        ownedCards += (1...count).map { _ in OwnedCard(card: card) }
+        changeContinuation.yield()
+    }
+
+    func removeNewestCopy(of cardID: Card.ID) async throws {
+        guard let newest = ownedCards.lastIndex(where: { $0.card.id == cardID }) else { return }
+        ownedCards.remove(at: newest)
+        changeContinuation.yield()
+    }
+
+    func remove(ownedCardIDs: [OwnedCard.ID]) async throws {
+        ownedCards.removeAll { ownedCardIDs.contains($0.id) }
+        changeContinuation.yield()
     }
 }
 

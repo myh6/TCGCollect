@@ -12,11 +12,17 @@ enum CardDetailUIComposer {
     struct Ownership {
         let copies: OwnedCopiesViewModel
         let addToCollection: AddToCollectionViewModel
+        let removeFromCollection: RemoveFromCollectionViewModel
     }
 
-    static func makeOwnership(of cardID: Card.ID, in collection: OwnedCardLoader & OwnedCardSaver) -> Ownership {
-        let copies = OwnedCopiesViewModel(cardID: cardID, loader: collection)
-        let saverThenRecount = OwnedCardSaverAfterSaveDecorator(decoratee: collection, afterSave: { await copies.refresh() })
-        return Ownership(copies: copies, addToCollection: AddToCollectionViewModel(saver: saverThenRecount))
+    static func makeOwnership(
+        of cardID: Card.ID,
+        in collection: OwnedCardCopyCounter & OwnedCardChangeObserver & OwnedCardAdder & OwnedCardRemover
+    ) -> Ownership {
+        Ownership(
+            copies: OwnedCopiesViewModel(cardID: cardID, counter: collection, observer: collection),
+            addToCollection: AddToCollectionViewModel(adder: collection),
+            removeFromCollection: RemoveFromCollectionViewModel(remover: collection)
+        )
     }
 }

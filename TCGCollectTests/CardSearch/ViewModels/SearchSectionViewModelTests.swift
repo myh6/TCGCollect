@@ -147,6 +147,35 @@ struct SearchSectionViewModelTests {
         #expect(sut.state == .idle)
     }
 
+    @Test func refreshOnEachOf_searchesLastQueryAgainAfterEveryChange() async {
+        let (sut, spy) = makeSUT()
+        await search(sut, for: "luffy", spy: spy, completingWith: .success(["Luffy"]))
+        let (changes, change) = AsyncStream.makeStream(of: Void.self)
+        let refreshing = Task { await sut.refresh(onEachOf: changes) }
+
+        change.yield()
+        await spy.waitForCall(at: 1)
+        spy.complete(with: .success(["Luffy", "Luffy Leader"]), at: 1)
+        change.yield()
+        await spy.waitForCall(at: 2)
+        spy.complete(with: .success(["Luffy"]), at: 2)
+        change.finish()
+        await refreshing.value
+
+        #expect(spy.queries == ["luffy", "luffy", "luffy"])
+        #expect(sut.state == .loaded(["Luffy"]))
+    }
+
+    @Test func refreshOnEachOf_returnsOnceChangesEnd() async {
+        let (sut, spy) = makeSUT()
+        let (changes, change) = AsyncStream.makeStream(of: Void.self)
+        change.finish()
+
+        await sut.refresh(onEachOf: changes)
+
+        #expect(spy.queries.isEmpty)
+    }
+
     // MARK: - Helpers
     private func makeSUT() -> (sut: SearchSectionViewModel<String>, spy: SearchSpy) {
         let spy = SearchSpy()

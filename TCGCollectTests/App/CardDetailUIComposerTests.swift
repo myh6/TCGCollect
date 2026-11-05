@@ -22,7 +22,7 @@ struct CardDetailUIComposerTests {
         #expect(sut.copies.copies == .loaded(1))
     }
 
-    @Test func addToCollection_savesToCollection() async {
+    @Test func addToCollection_addsToCollection() async {
         let card = makeCard(id: 7)
         let collection = CollectionStub()
         let sut = CardDetailUIComposer.makeOwnership(of: 7, in: collection)
@@ -32,25 +32,14 @@ struct CardDetailUIComposerTests {
         #expect(collection.ownedCards.map(\.card) == [card])
     }
 
-    @Test func addToCollection_recountsCopiesAfterAdding() async {
-        let card = makeCard(id: 7)
-        let collection = CollectionStub()
+    @Test func removeFromCollection_removesNewestCopyFromCollection() async {
+        let collection = CollectionStub(ownedCards: [OwnedCard(card: makeCard(id: 7)), OwnedCard(card: makeCard(id: 7))])
+        let oldest = collection.ownedCards[0]
         let sut = CardDetailUIComposer.makeOwnership(of: 7, in: collection)
-        await sut.copies.load()
 
-        await sut.addToCollection.add(card)
+        await sut.removeFromCollection.removeNewestCopy(of: 7)
 
-        #expect(sut.copies.copies == .loaded(1))
-    }
-
-    @Test func addToCollection_doesNotRecountWhenAddingFails() async {
-        let collection = CollectionStub(saveError: NSError(domain: "any error", code: 0))
-        let sut = CardDetailUIComposer.makeOwnership(of: 7, in: collection)
-        await sut.copies.load()
-
-        await sut.addToCollection.add(makeCard(id: 7))
-
-        #expect(collection.loadCount == 1)
+        #expect(collection.ownedCards == [oldest])
     }
 
     // MARK: - Helpers
@@ -59,24 +48,32 @@ struct CardDetailUIComposerTests {
     }
 
     @MainActor
-    private final class CollectionStub: OwnedCardLoader, OwnedCardSaver {
+    private final class CollectionStub: OwnedCardCopyCounter, OwnedCardChangeObserver, OwnedCardAdder, OwnedCardRemover {
         private(set) var ownedCards: [OwnedCard]
-        private(set) var loadCount = 0
-        private let saveError: Error?
 
-        init(ownedCards: [OwnedCard] = [], saveError: Error? = nil) {
+        init(ownedCards: [OwnedCard] = []) {
             self.ownedCards = ownedCards
-            self.saveError = saveError
         }
 
-        func load() async throws -> [OwnedCard] {
-            loadCount += 1
-            return ownedCards
+        func countCopies(of cardID: Card.ID) async throws -> Int {
+            ownedCards.filter { $0.card.id == cardID }.count
         }
 
-        func save(_ newCards: [OwnedCard]) async throws {
-            if let saveError { throw saveError }
-            ownedCards += newCards
+        func changes() -> AsyncStream<Void> {
+            AsyncStream { $0.finish() }
+        }
+
+        func addCopies(of card: Card, count: Int) async throws {
+            ownedCards += (1...count).map { _ in OwnedCard(card: card) }
+        }
+
+        func removeNewestCopy(of cardID: Card.ID) async throws {
+            guard let newest = ownedCards.lastIndex(where: { $0.card.id == cardID }) else { return }
+            ownedCards.remove(at: newest)
+        }
+
+        func remove(ownedCardIDs: [OwnedCard.ID]) async throws {
+            ownedCards.removeAll { ownedCardIDs.contains($0.id) }
         }
     }
 }

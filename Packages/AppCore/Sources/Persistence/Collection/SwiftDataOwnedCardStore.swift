@@ -30,6 +30,10 @@ public actor SwiftDataOwnedCardStore: OwnedCardStore {
         return try modelContext.fetch(descriptor).map(\.ownedCard)
     }
 
+    public func countCopies(of cardID: Card.ID) throws -> Int {
+        try modelContext.fetchCount(FetchDescriptor<ManagedOwnedCard>(predicate: #Predicate { $0.cardID == cardID }))
+    }
+
     public func insert(_ ownedCards: [OwnedCard]) throws {
         // A context just for this batch: if saving fails, it's thrown away with the unsaved changes.
         // Rolling back the shared context doesn't drop them, so its fetches would still show the failed batch.
@@ -46,21 +50,40 @@ public actor SwiftDataOwnedCardStore: OwnedCardStore {
         try context.save()
     }
 
-    public func delete(ownedCardID: OwnedCard.ID) throws {
-        // Deletes straight from the store file, so there's nothing left to save.
-        try modelContext.delete(model: ManagedOwnedCard.self, where: #Predicate { $0.ownedCardID == ownedCardID })
+    public func delete(ownedCardIDs: [OwnedCard.ID]) throws {
+        let context = ModelContext(modelContainer)
+        let descriptor = FetchDescriptor<ManagedOwnedCard>(predicate: #Predicate { ownedCardIDs.contains($0.ownedCardID) })
+        for stored in try context.fetch(descriptor) {
+            context.delete(stored)
+        }
+        try context.save()
     }
 
+    public func deleteNewestCopy(of cardID: Card.ID) throws {
+        let context = ModelContext(modelContainer)
+        guard let newest = try managedOwnedCard(matching: #Predicate { $0.cardID == cardID }, sortBy: newestFirst, in: context) else { return }
+        context.delete(newest)
+        try context.save()
+    }
+
+    private let newestFirst = [SortDescriptor(\ManagedOwnedCard.position, order: .reverse)]
+
     private func managedOwnedCard(withID id: OwnedCard.ID, in context: ModelContext) throws -> ManagedOwnedCard? {
-        var descriptor = FetchDescriptor<ManagedOwnedCard>(predicate: #Predicate { $0.ownedCardID == id })
+        try managedOwnedCard(matching: #Predicate { $0.ownedCardID == id }, in: context)
+    }
+
+    private func managedOwnedCard(
+        matching predicate: Predicate<ManagedOwnedCard>? = nil,
+        sortBy: [SortDescriptor<ManagedOwnedCard>] = [],
+        in context: ModelContext
+    ) throws -> ManagedOwnedCard? {
+        var descriptor = FetchDescriptor(predicate: predicate, sortBy: sortBy)
         descriptor.fetchLimit = 1
         return try context.fetch(descriptor).first
     }
 
     private func nextPosition(in context: ModelContext) throws -> Int {
-        var descriptor = FetchDescriptor<ManagedOwnedCard>(sortBy: [SortDescriptor(\.position, order: .reverse)])
-        descriptor.fetchLimit = 1
-        let last = try context.fetch(descriptor).first
+        let last = try managedOwnedCard(sortBy: newestFirst, in: context)
         return (last?.position ?? -1) + 1
     }
 }

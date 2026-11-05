@@ -21,6 +21,8 @@ struct TCGCollectApp: App {
     @State private var addToCollectionViewModel: AddToCollectionViewModel?
     // Owned here so the cards stay on screen while the tab reloads them.
     @State private var collectionViewModel: CollectionViewModel?
+    @State private var collectionValueViewModel = Self.makeCollectionValueViewModel()
+    @State private var collectionEditViewModel: CollectionEditViewModel?
     // Owned here so the results stay on screen after switching tabs.
     @State private var ownedCardsSearch: SearchSectionViewModel<OwnedCardGroup>?
     @State private var onlineCardsSearch = Self.makeOnlineCardsSearch()
@@ -32,8 +34,9 @@ struct TCGCollectApp: App {
         // Both from the same collection, so the app never opens the store twice.
         let collection = Self.makeOwnedCardCollection()
         _ownedCardCollection = State(initialValue: collection)
-        _addToCollectionViewModel = State(initialValue: collection.map { AddToCollectionViewModel(saver: $0) })
-        _collectionViewModel = State(initialValue: collection.map { CollectionViewModel(loader: $0) })
+        _addToCollectionViewModel = State(initialValue: collection.map { AddToCollectionViewModel(adder: $0) })
+        _collectionViewModel = State(initialValue: collection.map { CollectionViewModel(loader: $0, observer: $0) })
+        _collectionEditViewModel = State(initialValue: collection.map { CollectionEditViewModel(remover: $0) })
         _ownedCardsSearch = State(initialValue: collection.map {
             CardSearchUIComposer.makeOwnedCardsSection(searching: OwnedCardComposer.makeOwnedCardSearcher(searching: $0))
         })
@@ -55,7 +58,7 @@ struct TCGCollectApp: App {
                 Tab("Collection", systemImage: "rectangle.stack") {
                     NavigationStack {
                         if let collectionViewModel {
-                            CollectionView(viewModel: collectionViewModel)
+                            CollectionView(viewModel: collectionViewModel, valueViewModel: collectionValueViewModel, editViewModel: collectionEditViewModel)
                                 .navigationDestination(for: Card.self, destination: cardDetail)
                         } else {
                             CollectionUnavailableView()
@@ -75,6 +78,11 @@ struct TCGCollectApp: App {
             }
             .environment(\.imageLoader, imageLoader)
             .task { await backendWakeUp?.wakeUp() }
+            .task {
+                if let ownedCardCollection, let ownedCardsSearch {
+                    await ownedCardsSearch.refresh(onEachOf: ownedCardCollection.changes())
+                }
+            }
             #if DEBUG
             .task {
                 if SampleCards.isOn, let ownedCardCollection {
@@ -95,8 +103,8 @@ struct TCGCollectApp: App {
     }
 
     private var makeSearchAddToCollection: (() -> AddToCollectionViewModel)? {
-        guard let ownedCardCollection, let ownedCardsSearch else { return nil }
-        return { CardSearchUIComposer.makeAddToCollection(saving: ownedCardCollection, refreshing: ownedCardsSearch) }
+        guard let ownedCardCollection else { return nil }
+        return { AddToCollectionViewModel(adder: ownedCardCollection) }
     }
 
     /// nil when the backend isn't configured, e.g. in Release builds for now.
@@ -121,6 +129,12 @@ struct TCGCollectApp: App {
             Logger(subsystem: "TCGCollect", category: "Search").error("Online search unavailable: \(String(describing: error))")
             return nil
         }
+    }
+
+    private static func makeCollectionValueViewModel() -> CollectionValueViewModel? {
+        guard let configuration = try? BackendConfiguration(infoDictionary: Bundle.main.infoDictionary ?? [:]) else { return nil }
+        let loader = CollectionValueComposer.makeRemoteCollectionValueHistoryLoader(baseURL: configuration.baseURL, apiKey: configuration.apiKey)
+        return CollectionValueViewModel(loader: loader)
     }
 
     private static func makeBackendWakeUp() -> BackendWakeUp? {

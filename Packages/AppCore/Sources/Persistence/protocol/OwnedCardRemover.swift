@@ -9,5 +9,6 @@ import Foundation
 import Domain
 
 public protocol OwnedCardRemover {
-    func remove(ownedCardID: OwnedCard.ID) async throws
+    func remove(ownedCardIDs: [OwnedCard.ID]) async throws
+    func removeNewestCopy(of cardID: Card.ID) async throws
 }

@@ -16,14 +16,14 @@ import AppCore
 struct CollectionViewModelTests {
 
     @Test func init_startsIdleWithoutLoading() {
-        let (sut, loader) = makeSUT()
+        let (sut, loader, _) = makeSUT()
 
         #expect(sut.state == .idle)
         #expect(loader.loadCount == 0)
     }
 
     @Test func load_requestsOwnedCards() async {
-        let (sut, loader) = makeSUT()
+        let (sut, loader, _) = makeSUT()
 
         await load(sut, loader: loader, completingWith: .success([]))
 
@@ -31,7 +31,7 @@ struct CollectionViewModelTests {
     }
 
     @Test func load_isLoadingWhileWaitingForFirstLoad() async {
-        let (sut, loader) = makeSUT()
+        let (sut, loader, _) = makeSUT()
 
         let loading = await startLoading(sut, loader: loader)
         #expect(sut.state == .loading)
@@ -42,7 +42,7 @@ struct CollectionViewModelTests {
 
     @Test func load_deliversOwnedCardsOnLoaderSuccess() async {
         let ownedCards = [makeOwnedCard(cardID: 1), makeOwnedCard(cardID: 2)]
-        let (sut, loader) = makeSUT()
+        let (sut, loader, _) = makeSUT()
 
         await load(sut, loader: loader, completingWith: .success(ownedCards))
 
@@ -50,7 +50,7 @@ struct CollectionViewModelTests {
     }
 
     @Test func load_deliversNoOwnedCardsForEmptyCollection() async {
-        let (sut, loader) = makeSUT()
+        let (sut, loader, _) = makeSUT()
 
         await load(sut, loader: loader, completingWith: .success([]))
 
@@ -58,7 +58,7 @@ struct CollectionViewModelTests {
     }
 
     @Test func load_failsOnLoaderFailure() async {
-        let (sut, loader) = makeSUT()
+        let (sut, loader, _) = makeSUT()
 
         await load(sut, loader: loader, completingWith: .failure(anyError()))
 
@@ -68,7 +68,7 @@ struct CollectionViewModelTests {
     // Reloads each time the tab appears, so the cards stay on screen instead of flashing back to a spinner.
     @Test func load_keepsShowingOwnedCardsWhileReloading() async {
         let ownedCards = [makeOwnedCard(cardID: 1)]
-        let (sut, loader) = makeSUT()
+        let (sut, loader, _) = makeSUT()
         await load(sut, loader: loader, completingWith: .success(ownedCards))
 
         let reloading = await startLoading(sut, loader: loader, at: 1)
@@ -80,7 +80,7 @@ struct CollectionViewModelTests {
 
     @Test func load_deliversReloadedOwnedCards() async {
         let reloaded = [makeOwnedCard(cardID: 1), makeOwnedCard(cardID: 2)]
-        let (sut, loader) = makeSUT()
+        let (sut, loader, _) = makeSUT()
         await load(sut, loader: loader, completingWith: .success([makeOwnedCard(cardID: 1)]))
 
         let reloading = await startLoading(sut, loader: loader, at: 1)
@@ -93,7 +93,7 @@ struct CollectionViewModelTests {
     // Slightly out-of-date cards are more useful than an error.
     @Test func load_keepsShowingOwnedCardsWhenReloadFails() async {
         let ownedCards = [makeOwnedCard(cardID: 1)]
-        let (sut, loader) = makeSUT()
+        let (sut, loader, _) = makeSUT()
         await load(sut, loader: loader, completingWith: .success(ownedCards))
 
         let reloading = await startLoading(sut, loader: loader, at: 1)
@@ -104,7 +104,7 @@ struct CollectionViewModelTests {
     }
 
     @Test func load_ignoresLoadWhileLoading() async {
-        let (sut, loader) = makeSUT()
+        let (sut, loader, _) = makeSUT()
         let firstLoading = await startLoading(sut, loader: loader)
         loader.setCompletionForNewCalls(to: .success([]))
 
@@ -116,7 +116,7 @@ struct CollectionViewModelTests {
     }
 
     @Test func load_ignoresLoadWhileReloading() async {
-        let (sut, loader) = makeSUT()
+        let (sut, loader, _) = makeSUT()
         await load(sut, loader: loader, completingWith: .success([makeOwnedCard(cardID: 1)]))
         let reloading = await startLoading(sut, loader: loader, at: 1)
         loader.setCompletionForNewCalls(to: .success([]))
@@ -128,11 +128,50 @@ struct CollectionViewModelTests {
         await reloading.value
     }
 
+    @Test func start_listensForChangesBeforeLoading() async {
+        let (sut, loader, observer) = makeSUT()
+
+        let starting = Task { await sut.start() }
+        await loader.waitForCall(at: 0)
+        #expect(observer.listenCount == 1)
+
+        loader.complete(with: .success([]))
+        observer.finish()
+        await starting.value
+    }
+
+    @Test func start_reloadsAfterEveryChange() async {
+        let afterRemoving = [makeOwnedCard(cardID: 1)]
+        let (sut, loader, observer) = makeSUT()
+        let starting = Task { await sut.start() }
+        await loader.waitForCall(at: 0)
+        loader.complete(with: .success([makeOwnedCard(cardID: 1), makeOwnedCard(cardID: 2)]))
+
+        observer.announceChange()
+        await loader.waitForCall(at: 1)
+        loader.complete(with: .success(afterRemoving), at: 1)
+        observer.finish()
+        await starting.value
+
+        #expect(sut.state == .loaded(afterRemoving))
+    }
+
+    @Test func start_returnsOnceChangesEnd() async {
+        let (sut, loader, observer) = makeSUT()
+        loader.setCompletionForNewCalls(to: .success([]))
+        observer.finish()
+
+        await sut.start()
+
+        #expect(sut.state == .loaded([]))
+    }
+
     // MARK: - Helpers
-    private func makeSUT() -> (sut: CollectionViewModel, loader: LoaderSpy) {
+    private func makeSUT() -> (sut: CollectionViewModel, loader: LoaderSpy, observer: ChangeObserverStub) {
         let loader = LoaderSpy()
-        let sut = CollectionViewModel(loader: loader)
-        return (sut, loader)
+        let observer = ChangeObserverStub()
+        let sut = CollectionViewModel(loader: loader, observer: observer)
+        return (sut, loader, observer)
     }
 
     private func makeOwnedCard(cardID: Int) -> OwnedCard {

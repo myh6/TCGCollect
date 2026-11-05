@@ -184,36 +184,144 @@ extension SwiftDataStoreFileTests {
             #expect(try await makeSUT().retrieveAll() == [stored])
         }
 
-        @Test func delete_removesOnlyOwnedCardWithID() async throws {
-            let kept = OwnedCard(card: Card(id: 1, name: "a card"))
-            let deleted = OwnedCard(card: Card(id: 2, name: "another card"))
+        @Test func delete_removesOnlyOwnedCardsWithIDs() async throws {
+            let ownedCards = [1, 2, 3].map { OwnedCard(card: Card(id: $0, name: "card \($0)")) }
             let sut = try makeSUT()
-            try await sut.insert([kept])
-            try await sut.insert([deleted])
+            try await sut.insert(ownedCards)
 
-            try await sut.delete(ownedCardID: deleted.id)
+            try await sut.delete(ownedCardIDs: [ownedCards[0].id, ownedCards[2].id])
 
-            #expect(try await sut.retrieveAll() == [kept])
+            #expect(try await sut.retrieveAll() == [ownedCards[1]])
         }
 
-        @Test func delete_removesOwnedCardForAnotherInstanceToo() async throws {
-            let ownedCard = makeOwnedCardWithAllValues()
+        @Test func delete_removesOwnedCardsForAnotherInstanceToo() async throws {
+            let ownedCards = [1, 2].map { OwnedCard(card: Card(id: $0, name: "card \($0)")) }
             let sut = try makeSUT()
-            try await sut.insert([ownedCard])
+            try await sut.insert(ownedCards)
 
-            try await sut.delete(ownedCardID: ownedCard.id)
+            try await sut.delete(ownedCardIDs: ownedCards.map(\.id))
 
             #expect(try await makeSUT().retrieveAll().isEmpty)
         }
 
-        @Test func delete_doesNothingForIDNotInStore() async throws {
+        @Test func delete_ignoresIDsNotInStore() async throws {
+            let kept = OwnedCard(card: Card(id: 1, name: "a card"))
+            let deleted = OwnedCard(card: Card(id: 2, name: "another card"))
+            let sut = try makeSUT()
+            try await sut.insert([kept, deleted])
+
+            try await sut.delete(ownedCardIDs: [UUID(), deleted.id])
+
+            #expect(try await sut.retrieveAll() == [kept])
+        }
+
+        @Test func delete_ofEmptyBatchDoesNothing() async throws {
             let ownedCard = makeOwnedCardWithAllValues()
             let sut = try makeSUT()
             try await sut.insert([ownedCard])
 
-            try await sut.delete(ownedCardID: UUID())
+            try await sut.delete(ownedCardIDs: [])
 
             #expect(try await sut.retrieveAll() == [ownedCard])
+        }
+
+        @Test func delete_removesNoneOfBatchWhenSaveFails() async throws {
+            let ownedCards = [1, 2].map { OwnedCard(card: Card(id: $0, name: "card \($0)")) }
+            try await makeSUT().insert(ownedCards)
+            let sut = try makeReadOnlySUT()
+
+            await #expect(throws: (any Error).self) {
+                try await sut.delete(ownedCardIDs: ownedCards.map(\.id))
+            }
+
+            #expect(try await sut.retrieveAll() == ownedCards)
+            #expect(try await makeSUT().retrieveAll() == ownedCards)
+        }
+
+        @Test func deleteNewestCopy_removesOnlyTheLastStoredCopyOfCard() async throws {
+            let firstLuffy = makeCopy(of: luffy)
+            let zoroCopy = makeCopy(of: zoro)
+            let secondLuffy = makeCopy(of: luffy)
+            let sut = try makeSUT()
+            try await sut.insert([firstLuffy, zoroCopy, secondLuffy])
+
+            try await sut.deleteNewestCopy(of: luffy.id)
+
+            #expect(try await sut.retrieveAll() == [firstLuffy, zoroCopy])
+        }
+
+        @Test func deleteNewestCopy_doesNothingWithoutCopiesOfCard() async throws {
+            let zoroCopy = makeCopy(of: zoro)
+            let sut = try makeSUT()
+            try await sut.insert([zoroCopy])
+
+            try await sut.deleteNewestCopy(of: luffy.id)
+
+            #expect(try await sut.retrieveAll() == [zoroCopy])
+        }
+
+        @Test func deleteNewestCopy_removesCopyForAnotherInstanceToo() async throws {
+            let sut = try makeSUT()
+            try await sut.insert([makeCopy(of: luffy)])
+
+            try await sut.deleteNewestCopy(of: luffy.id)
+
+            #expect(try await makeSUT().retrieveAll().isEmpty)
+        }
+
+        @Test func deleteNewestCopy_removesNothingWhenSaveFails() async throws {
+            let copies = [makeCopy(of: luffy), makeCopy(of: luffy)]
+            try await makeSUT().insert(copies)
+            let sut = try makeReadOnlySUT()
+
+            await #expect(throws: (any Error).self) {
+                try await sut.deleteNewestCopy(of: luffy.id)
+            }
+
+            #expect(try await sut.retrieveAll() == copies)
+            #expect(try await makeSUT().retrieveAll() == copies)
+        }
+
+        @Test func deleteNewestCopy_removesADifferentCopyForEachCallMadeAtTheSameTime() async throws {
+            let oldest = makeCopy(of: luffy)
+            let cardID = luffy.id
+            let sut = try SwiftDataOwnedCardStore(storeURL: storeURL)
+            try await sut.insert([oldest, makeCopy(of: luffy), makeCopy(of: luffy)])
+
+            async let first: Void = sut.deleteNewestCopy(of: cardID)
+            async let second: Void = sut.deleteNewestCopy(of: cardID)
+            _ = try await (first, second)
+
+            #expect(try await sut.retrieveAll() == [oldest])
+        }
+
+        @Test func countCopies_isZeroWithoutCopiesOfCard() async throws {
+            let sut = try makeSUT()
+            try await sut.insert([makeCopy(of: zoro)])
+
+            #expect(try await sut.countCopies(of: luffy.id) == 0)
+        }
+
+        @Test func countCopies_countsOnlyCopiesOfCard() async throws {
+            let sut = try makeSUT()
+            try await sut.insert([makeCopy(of: luffy), makeCopy(of: zoro), makeCopy(of: luffy)])
+
+            #expect(try await sut.countCopies(of: luffy.id) == 2)
+        }
+
+        @Test func countCopies_countsCopiesStoredByAnotherInstance() async throws {
+            try await makeSUT().insert([makeCopy(of: luffy), makeCopy(of: luffy)])
+
+            #expect(try await makeSUT().countCopies(of: luffy.id) == 2)
+        }
+
+        @Test func countCopies_leavesOutDeletedCopies() async throws {
+            let sut = try makeSUT()
+            try await sut.insert([makeCopy(of: luffy), makeCopy(of: luffy)])
+
+            try await sut.deleteNewestCopy(of: luffy.id)
+
+            #expect(try await sut.countCopies(of: luffy.id) == 1)
         }
 
         // MARK: - Helpers
@@ -224,6 +332,13 @@ extension SwiftDataStoreFileTests {
         /// Opens the same store file, but every save fails.
         private func makeReadOnlySUT() throws -> OwnedCardStore {
             try SwiftDataOwnedCardStore(storeURL: storeURL, allowsSave: false)
+        }
+
+        private let luffy = Card(id: 1, name: "Monkey.D.Luffy")
+        private let zoro = Card(id: 2, name: "Roronoa Zoro")
+
+        private func makeCopy(of card: Card) -> OwnedCard {
+            OwnedCard(card: card)
         }
 
         private var storeURL: URL {

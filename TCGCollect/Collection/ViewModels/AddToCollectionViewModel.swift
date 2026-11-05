@@ -37,10 +37,10 @@ final class AddToCollectionViewModel {
     private var statuses = [Card.ID: Status]()
     private var copies = [Card.ID: Int]()
 
-    private let saver: OwnedCardSaver
+    private let adder: OwnedCardAdder
 
-    init(saver: OwnedCardSaver) {
-        self.saver = saver
+    init(adder: OwnedCardAdder) {
+        self.adder = adder
     }
 
     func status(for cardID: Card.ID) -> Status {
@@ -75,15 +75,14 @@ final class AddToCollectionViewModel {
         copies[cardID] = min(max(count, Self.copiesRange.lowerBound), Self.copiesRange.upperBound)
     }
 
-    /// Saves the chosen number of copies in one save, so either all of them are added or none.
+    /// Adds the chosen number of copies in one add, so either all of them are added or none.
     /// Does nothing while the card is being added or once it's added, so a second tap can't add them twice.
     func add(_ card: Card) async {
         guard status(for: card.id).canAdd else { return }
 
         statuses[card.id] = .adding
         do {
-            // Each copy is its own owned card, with its own id, so it can be edited or removed on its own.
-            try await saver.save((0..<copies(for: card.id)).map { _ in OwnedCard(card: card) })
+            try await adder.addCopies(of: card, count: copies(for: card.id))
             statuses[card.id] = .added
         } catch {
             statuses[card.id] = .failed

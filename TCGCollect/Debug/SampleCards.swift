@@ -47,9 +47,9 @@ enum SampleCards {
 
     static func addMissing(to collection: OwnedCardCollection) async {
         let ownedIDs = Set(((try? await collection.load()) ?? []).map(\.card.id))
-        let missing = cards.filter { !ownedIDs.contains($0.id) }.map { OwnedCard(card: $0) }
-        guard !missing.isEmpty else { return }
-        try? await collection.save(missing)
+        for card in cards where !ownedIDs.contains(card.id) {
+            try? await collection.addCopies(of: card, count: 1)
+        }
     }
 }
 

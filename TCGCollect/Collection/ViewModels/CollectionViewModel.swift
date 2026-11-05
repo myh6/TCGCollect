@@ -25,9 +25,19 @@ final class CollectionViewModel {
     private(set) var state = State.idle
 
     private let loader: OwnedCardLoader
+    private let observer: OwnedCardChangeObserver
 
-    init(loader: OwnedCardLoader) {
+    init(loader: OwnedCardLoader, observer: OwnedCardChangeObserver) {
         self.loader = loader
+        self.observer = observer
+    }
+
+    func start() async {
+        let changes = observer.changes()
+        await load()
+        for await _ in changes {
+            await load()
+        }
     }
 
     /// Loads the collection, e.g. each time the screen appears. Does nothing while already loading.

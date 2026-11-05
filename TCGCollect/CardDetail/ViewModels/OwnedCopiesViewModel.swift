@@ -15,11 +15,21 @@ final class OwnedCopiesViewModel {
     private(set) var copies = LoadingState<Int>.idle
 
     private let cardID: Card.ID
-    private let loader: OwnedCardLoader
+    private let counter: OwnedCardCopyCounter
+    private let observer: OwnedCardChangeObserver
 
-    init(cardID: Card.ID, loader: OwnedCardLoader) {
+    init(cardID: Card.ID, counter: OwnedCardCopyCounter, observer: OwnedCardChangeObserver) {
         self.cardID = cardID
-        self.loader = loader
+        self.counter = counter
+        self.observer = observer
+    }
+
+    func start() async {
+        let changes = observer.changes()
+        await load()
+        for await _ in changes {
+            await refresh()
+        }
     }
 
     func load() async {
@@ -41,6 +51,6 @@ final class OwnedCopiesViewModel {
     }
 
     private func count() async throws -> Int {
-        try await loader.load().filter { $0.card.id == cardID }.count
+        try await counter.countCopies(of: cardID)
     }
 }
