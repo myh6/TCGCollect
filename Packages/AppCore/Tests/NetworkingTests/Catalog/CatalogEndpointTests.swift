@@ -33,6 +33,13 @@ struct CatalogEndpointTests {
         #expect(received.httpBody == nil)
     }
 
+    // Sent explicitly, so the page size doesn't change if the backend's default does.
+    @Test func cards_sendsLimitOfFiftyByDefault() {
+        let received = CatalogEndpoint.cards(setID: 1, offset: 0).urlRequest(baseURL: URL(string: "http://base-url.com")!)
+
+        #expect(received.url?.absoluteString == "http://base-url.com/v1/catalog/sets/1/cards?limit=50&offset=0")
+    }
+
     // MARK: - Helpers
     struct Endpoint: Sendable, CustomTestStringConvertible {
         let path: String
@@ -44,5 +51,6 @@ struct CatalogEndpointTests {
     static let endpoints = [
         Endpoint(path: "v1/catalog/games") { CatalogEndpoint.games.urlRequest(baseURL: $0) },
         Endpoint(path: "v1/catalog/games/a-game/sets") { CatalogEndpoint.sets(gameSlug: "a-game").urlRequest(baseURL: $0) },
+        Endpoint(path: "v1/catalog/sets/1/cards?limit=10&offset=20") { CatalogEndpoint.cards(setID: 1, limit: 10, offset: 20).urlRequest(baseURL: $0) },
     ]
 }

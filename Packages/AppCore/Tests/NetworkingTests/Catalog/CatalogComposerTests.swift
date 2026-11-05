@@ -50,6 +50,28 @@ struct CatalogComposerTests {
         #expect(try await sut.loadSets(ofGame: "a-game") == [CardSet(id: 1, name: "A Set", cardCount: 3, releaseDate: nil)])
     }
 
+    @Test func makeRemoteCardSetPageLoader_requestsPageOfSetWithAPIKeyFromBaseURL() async throws {
+        let session = Stub.makeSession(replyingWith: makeJSON(["cards": [], "total": 0]))
+        let sut = CatalogComposer.makeRemoteCardSetPageLoader(baseURL: anyBaseURL(), apiKey: "an api key", session: session)
+
+        _ = try await sut.loadCards(inSet: 1, offset: 50)
+
+        let requests = Stub.requests
+        #expect(requests.map(\.url) == [URL(string: "http://base-url.com/v1/catalog/sets/1/cards?limit=50&offset=50")!])
+        #expect(requests.map { $0.value(forHTTPHeaderField: "X-API-Key") } == ["an api key"])
+    }
+
+    @Test func makeRemoteCardSetPageLoader_deliversPageFromBackend() async throws {
+        let card = makeRemoteCard(id: 1, name: "a card")
+        let session = Stub.makeSession(replyingWith: makeJSON(["cards": [card.json], "total": 3]))
+        let sut = CatalogComposer.makeRemoteCardSetPageLoader(baseURL: anyBaseURL(), apiKey: "an api key", session: session)
+
+        let page = try await sut.loadCards(inSet: 1, offset: 0)
+
+        #expect(page.cards.map(\.card.id) == [1])
+        #expect(page.totalCount == 3)
+    }
+
     // MARK: - Helpers
     private func anyBaseURL() -> URL {
         URL(string: "http://base-url.com")!

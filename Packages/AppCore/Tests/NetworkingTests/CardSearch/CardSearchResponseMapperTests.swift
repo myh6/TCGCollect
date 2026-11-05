@@ -104,7 +104,3 @@ struct CardSearchResponseMapperTests {
         try! JSONSerialization.data(withJSONObject: cards)
     }
 }
-
-private extension RemoteCardFixture {
-    var result: CardSearchResult { CardSearchResult(card: card, price: price) }
-}
