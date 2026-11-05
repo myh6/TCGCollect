@@ -7,7 +7,7 @@
 
 import Foundation
 
-public struct CardSet: Identifiable, Equatable, Sendable {
+public struct CardSet: Identifiable, Hashable, Sendable {
     public let id: Int
     public let name: String
     public let cardCount: Int
