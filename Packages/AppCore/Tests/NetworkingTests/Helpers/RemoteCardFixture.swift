@@ -13,6 +13,8 @@ struct RemoteCardFixture {
     let card: Card
     let price: PricePoint
     var json: [String: Any]
+
+    var result: CardSearchResult { CardSearchResult(card: card, price: price) }
 }
 
 /// Optional values are sent as null, like the backend does.

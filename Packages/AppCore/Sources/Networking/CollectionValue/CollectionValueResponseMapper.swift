@@ -30,15 +30,6 @@ enum CollectionValueResponseMapper {
         Decimal(string: amount, locale: Locale(identifier: "en_US_POSIX")).map { Money(amount: $0, currencyCode: currencyCode) }
     }
 
-    private static func startOfDay(_ text: String) -> Date? {
-        let formatter = DateFormatter()
-        formatter.locale = Locale(identifier: "en_US_POSIX")
-        formatter.calendar = Calendar(identifier: .gregorian)
-        formatter.timeZone = .current
-        formatter.dateFormat = "yyyy-MM-dd"
-        return formatter.date(from: text)
-    }
-
     private struct ResponseBody: Decodable {
         let current_total: String?
         let history: [Lossy<Point>]
@@ -49,7 +40,7 @@ enum CollectionValueResponseMapper {
         let total_value: String
 
         var valuePoint: CollectionValuePoint? {
-            guard let day = startOfDay(date), let value = dollars(total_value) else { return nil }
+            guard let day = RemoteDay.startOfDay(from: date), let value = dollars(total_value) else { return nil }
             return CollectionValuePoint(date: day, value: value)
         }
     }

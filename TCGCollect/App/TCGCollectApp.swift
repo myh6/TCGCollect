@@ -26,6 +26,8 @@ struct TCGCollectApp: App {
     // Owned here so the results stay on screen after switching tabs.
     @State private var ownedCardsSearch: SearchSectionViewModel<OwnedCardGroup>?
     @State private var onlineCardsSearch = Self.makeOnlineCardsSearch()
+    @State private var catalogGames: CatalogListViewModel<CardGame>?
+    private let catalogLoaders: CatalogLoaders?
     private let cardDetailsLoader = Self.makeCardDetailsLoader()
     private let backendWakeUp = Self.makeBackendWakeUp()
     private let cardPriceHistoryLoader = Self.makeCardPriceHistoryLoader()
@@ -40,6 +42,9 @@ struct TCGCollectApp: App {
         _ownedCardsSearch = State(initialValue: collection.map {
             CardSearchUIComposer.makeOwnedCardsSection(searching: OwnedCardComposer.makeOwnedCardSearcher(searching: $0))
         })
+        let catalogLoaders = Self.makeCatalogLoaders()
+        self.catalogLoaders = catalogLoaders
+        _catalogGames = State(initialValue: catalogLoaders.map { CatalogUIComposer.makeGamesList(loader: $0.games) })
     }
 
     var body: some Scene {
@@ -62,6 +67,16 @@ struct TCGCollectApp: App {
                                 .navigationDestination(for: Card.self, destination: cardDetail)
                         } else {
                             CollectionUnavailableView()
+                        }
+                    }
+                }
+                Tab("Catalog", systemImage: "books.vertical") {
+                    NavigationStack {
+                        if let catalogGames, let catalogLoaders {
+                            CatalogView(viewModel: catalogGames, setsLoader: catalogLoaders.sets, setPageLoader: catalogLoaders.setPages)
+                                .navigationDestination(for: Card.self, destination: cardDetail)
+                        } else {
+                            CatalogUnavailableView()
                         }
                     }
                 }
@@ -135,6 +150,21 @@ struct TCGCollectApp: App {
         guard let configuration = try? BackendConfiguration(infoDictionary: Bundle.main.infoDictionary ?? [:]) else { return nil }
         let loader = CollectionValueComposer.makeRemoteCollectionValueHistoryLoader(baseURL: configuration.baseURL, apiKey: configuration.apiKey)
         return CollectionValueViewModel(loader: loader)
+    }
+
+    private struct CatalogLoaders {
+        let games: CardGamesLoader
+        let sets: CardSetsLoader
+        let setPages: CardSetPageLoader
+    }
+
+    private static func makeCatalogLoaders() -> CatalogLoaders? {
+        guard let configuration = try? BackendConfiguration(infoDictionary: Bundle.main.infoDictionary ?? [:]) else { return nil }
+        return CatalogLoaders(
+            games: CatalogComposer.makeRemoteCardGamesLoader(baseURL: configuration.baseURL, apiKey: configuration.apiKey),
+            sets: CatalogComposer.makeRemoteCardSetsLoader(baseURL: configuration.baseURL, apiKey: configuration.apiKey),
+            setPages: CatalogComposer.makeRemoteCardSetPageLoader(baseURL: configuration.baseURL, apiKey: configuration.apiKey)
+        )
     }
 
     private static func makeBackendWakeUp() -> BackendWakeUp? {
