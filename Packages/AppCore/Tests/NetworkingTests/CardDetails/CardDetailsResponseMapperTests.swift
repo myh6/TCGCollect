@@ -132,6 +132,7 @@ private extension GameDetails {
     var onePiece: OnePieceDetails? {
         switch self {
         case let .onePiece(details): details
+        case .pokemon: nil
         }
     }
 }

@@ -97,7 +97,7 @@ struct CardDetailContent: View {
                 .padding()
         case .loaded(.some(.onePiece(let details))):
             OnePieceDetailsSection(details: OnePieceDetailsPresentation(details))
-        case .loaded(.none):
+        case .loaded(.none), .loaded(.some(.pokemon)):
             Text("No details for this card yet.")
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
