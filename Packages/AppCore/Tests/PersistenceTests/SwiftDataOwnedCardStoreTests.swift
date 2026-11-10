@@ -50,6 +50,17 @@ extension SwiftDataStoreFileTests {
             #expect(ownedCards == [ownedCard])
         }
 
+        @Test(arguments: [Game.onePiece, .pokemon])
+        func retrieveAll_deliversInsertedOwnedCardOfGame(game: Game) async throws {
+            let ownedCard = OwnedCard(card: Card(id: 1, name: "a card", game: game))
+            let sut = try makeSUT()
+
+            try await sut.insert([ownedCard])
+            let ownedCards = try await sut.retrieveAll()
+
+            #expect(ownedCards == [ownedCard])
+        }
+
         @Test func retrieveAll_deliversOwnedCardsInInsertionOrder() async throws {
             let ownedCards = [3, 1, 2].map { OwnedCard(card: Card(id: $0, name: "card \($0)")) }
             let sut = try makeSUT()
@@ -355,7 +366,8 @@ extension SwiftDataStoreFileTests {
                     setName: "Romance Dawn",
                     imageURL: URL(string: "https://an-image-url.com/op01-024.png"),
                     rarity: "L",
-                    printing: "Normal"
+                    printing: "Normal",
+                    game: .onePiece
                 ),
                 purchasePrice: Money(amount: Decimal(string: "12.34")!, currencyCode: "USD"),
                 acquiredOn: Date(timeIntervalSince1970: 1_700_000_000)

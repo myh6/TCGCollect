@@ -26,6 +26,7 @@ final class ManagedOwnedCard {
     var imageURL: URL?
     var rarity: String?
     var printing: String?
+    var game: String?
 
     var purchaseAmount: Decimal?
     var purchaseCurrencyCode: String?
@@ -49,6 +50,7 @@ final class ManagedOwnedCard {
         imageURL = ownedCard.card.imageURL
         rarity = ownedCard.card.rarity
         printing = ownedCard.card.printing
+        game = ownedCard.card.game.map(storedGame)
         purchaseAmount = ownedCard.purchasePrice?.amount
         purchaseCurrencyCode = ownedCard.purchasePrice?.currencyCode
         acquiredOn = ownedCard.acquiredOn
@@ -65,11 +67,27 @@ final class ManagedOwnedCard {
                 setName: setName,
                 imageURL: imageURL,
                 rarity: rarity,
-                printing: printing
+                printing: printing,
+                game: cardGame
             ),
             purchasePrice: purchasePrice,
             acquiredOn: acquiredOn
         )
+    }
+
+    private func storedGame(_ game: Game) -> String {
+        switch game {
+        case .onePiece: "onePiece"
+        case .pokemon: "pokemon"
+        }
+    }
+
+    private var cardGame: Game? {
+        switch game {
+        case "onePiece": .onePiece
+        case "pokemon": .pokemon
+        default: nil
+        }
     }
 
     private var purchasePrice: Money? {
