@@ -11,6 +11,7 @@ public struct Card: Identifiable, Hashable, Sendable {
     public let imageURL: URL?
     public let rarity: String?
     public let printing: String?
+    public let game: Game?
 
     public init(
         id: Int,
@@ -20,7 +21,8 @@ public struct Card: Identifiable, Hashable, Sendable {
         setName: String? = nil,
         imageURL: URL? = nil,
         rarity: String? = nil,
-        printing: String? = nil
+        printing: String? = nil,
+        game: Game? = nil
     ) {
         self.id = id
         self.name = name
@@ -30,5 +32,6 @@ public struct Card: Identifiable, Hashable, Sendable {
         self.imageURL = imageURL
         self.rarity = rarity
         self.printing = printing
+        self.game = game
     }
 }

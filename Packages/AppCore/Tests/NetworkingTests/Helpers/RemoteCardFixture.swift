@@ -27,6 +27,7 @@ func makeRemoteCard(
     imageURL: URL? = nil,
     rarity: String? = nil,
     printing: String? = nil,
+    game: (slug: String, game: Game)? = ("one-piece-card-game", .onePiece),
     price: String = "9.99",
     currency: String = "USD",
     fetchedAt: (date: Date, iso8601: String) = (Date(timeIntervalSince1970: 1_767_225_600), "2026-01-01T00:00:00+00:00")
@@ -39,7 +40,8 @@ func makeRemoteCard(
         setName: setName,
         imageURL: imageURL,
         rarity: rarity,
-        printing: printing
+        printing: printing,
+        game: game?.game
     )
     let pricePoint = PricePoint(
         cardID: id,
@@ -55,7 +57,7 @@ func makeRemoteCard(
         "set_name": setName ?? NSNull(),
         "rarity": rarity ?? NSNull(),
         "printing": printing ?? NSNull(),
-        "game_slug": "one-piece-card-game",
+        "game_slug": game?.slug ?? NSNull(),
         "current_price": price,
         "current_fetched_at": fetchedAt.iso8601,
         "currency": currency,
