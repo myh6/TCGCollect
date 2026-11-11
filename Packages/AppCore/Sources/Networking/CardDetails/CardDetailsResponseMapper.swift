@@ -14,16 +14,29 @@ enum CardDetailsResponseMapper {
     }
 
     static func map(_ data: Data, from response: HTTPURLResponse) throws -> GameDetails? {
-        guard response.statusCode == 200,
-              let body = try? JSONDecoder().decode(ResponseBody.self, from: data) else {
-            throw Error.invalidData
+        guard response.statusCode == 200 else { throw Error.invalidData }
+        switch try decode(ResponseBody.self, from: data).game_slug {
+        case "one-piece-card-game":
+            return try decode(DetailsBody<RemoteOnePieceDetails>.self, from: data).details?.onePieceDetails.map(GameDetails.onePiece)
+        case "pokemon":
+            return try decode(DetailsBody<RemotePokemonDetails>.self, from: data).details?.pokemonDetails.map(GameDetails.pokemon)
+        default:
+            return nil
         }
-        return body.details?.onePieceDetails.map(GameDetails.onePiece)
+    }
+
+    private static func decode<Body: Decodable>(_ type: Body.Type, from data: Data) throws -> Body {
+        guard let body = try? JSONDecoder().decode(type, from: data) else { throw Error.invalidData }
+        return body
     }
 
     private struct ResponseBody: Decodable {
         let card_id: Int
-        let details: RemoteOnePieceDetails?
+        let game_slug: String?
+    }
+
+    private struct DetailsBody<Details: Decodable>: Decodable {
+        let details: Details?
     }
 
     private struct RemoteOnePieceDetails: Decodable {
@@ -48,17 +61,53 @@ enum CardDetailsResponseMapper {
                 life: life?.value,
                 attributes: attribute ?? [],
                 types: subtypes ?? [],
-                effect: effect
+                effect: CardTextMarkdown.nonEmptyMarkdown(fromHTML: description)
             )
-        }
-
-        private var effect: String? {
-            let markdown = description.map(CardTextMarkdown.markdown(fromHTML:)) ?? ""
-            return markdown.isEmpty ? nil : markdown
         }
 
         private static func category(_ cardType: String) -> OnePieceDetails.Category? {
             OnePieceDetails.Category(rawValue: cardType.lowercased().filter(\.isLetter))
+        }
+    }
+
+    private struct RemotePokemonDetails: Decodable {
+        let cardType: [String]?
+        let stage: String?
+        let hp: TextNumber?
+        let energyType: [String]?
+        let attack1: String?
+        let attack2: String?
+        let attack3: String?
+        let attack4: String?
+        let weakness: String?
+        let resistance: String?
+        let retreatCost: TextNumber?
+        let description: String?
+        let flavorText: String?
+
+        var pokemonDetails: PokemonDetails? {
+            guard let category = cardType?.lazy.compactMap(category).first else { return nil }
+            return PokemonDetails(
+                category: category,
+                stage: text(stage),
+                hp: hp?.value,
+                energyTypes: (energyType ?? []).compactMap { PokemonDetails.EnergyType(rawValue: $0.lowercased()) },
+                attacks: [attack1, attack2, attack3, attack4].compactMap(CardTextMarkdown.nonEmptyMarkdown(fromHTML:)),
+                weakness: text(weakness),
+                resistance: text(resistance),
+                retreatCost: retreatCost?.value,
+                effect: CardTextMarkdown.nonEmptyMarkdown(fromHTML: description),
+                flavorText: text(flavorText)
+            )
+        }
+
+        private func category(_ cardType: String) -> PokemonDetails.Category? {
+            PokemonDetails.Category(rawValue: cardType.lowercased().filter(\.isLetter))
+        }
+
+        private func text(_ value: String?) -> String? {
+            let text = value?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+            return text.isEmpty || text.lowercased() == "none" ? nil : text
         }
     }
 

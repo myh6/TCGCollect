@@ -96,7 +96,7 @@ struct CardDetailsResponseMapperTests {
         ("null", nil),
     ] as [(String, Int?)])
     func map_readsNumbersWrittenAsTextOrNumbers(jsonValue: String, expected: Int?) throws {
-        let json = #"{"card_id": 1, "details": {"cardType": ["Character"], "cost": \#(jsonValue), "power": \#(jsonValue), "counter": \#(jsonValue), "life": \#(jsonValue)}}"#
+        let json = #"{"card_id": 1, "game_slug": "one-piece-card-game", "details": {"cardType": ["Character"], "cost": \#(jsonValue), "power": \#(jsonValue), "counter": \#(jsonValue), "life": \#(jsonValue)}}"#
 
         let result = try CardDetailsResponseMapper.map(Data(json.utf8), from: httpResponse(statusCode: 200))
 
@@ -118,13 +118,100 @@ struct CardDetailsResponseMapperTests {
         #expect(result?.onePiece?.effect == nil)
     }
 
-    // MARK: - Helpers
-    private func map(details: [String: Any]?) throws -> GameDetails? {
-        try CardDetailsResponseMapper.map(makeResponseJSON(details: details), from: httpResponse(statusCode: 200))
+    @Test(arguments: [nil, "an-unknown-game"])
+    func map_deliversNoDetailsWhenGameSlugIsMissingOrUnknown(gameSlug: String?) throws {
+        #expect(try map(details: ["cardType": ["Event"], "color": ["Red"]], gameSlug: gameSlug) == nil)
     }
 
-    private func makeResponseJSON(details: [String: Any]?) -> Data {
-        try! JSONSerialization.data(withJSONObject: ["card_id": 1, "details": details.map { $0 as Any } ?? NSNull()])
+    @Test func map_deliversPokemonDetailsFromBackendExample() throws {
+        let details: [String: Any] = [
+            "description": "",
+            "stage": "Basic",
+            "energyType": ["Fighting"],
+            "cardType": ["Pokemon"],
+            "cardTypeB": "Fighting",
+            "retreatCost": "1",
+            "resistance": "None",
+            "weakness": "Px2",
+            "flavorText": "",
+            "attack1": "[F] Thrash (20+)\r\n<br>Flip a coin. If tails, this Pokemon also does 20 damage to itself. If Heads, this attack does 20 more damage.",
+            "attack2": NSNull(),
+            "attack3": NSNull(),
+            "attack4": NSNull(),
+            "hp": "60",
+        ]
+
+        let result = try map(details: details, gameSlug: "pokemon")
+
+        #expect(result == .pokemon(PokemonDetails(
+            category: .pokemon,
+            stage: "Basic",
+            hp: 60,
+            energyTypes: [.fighting],
+            attacks: ["[F] Thrash (20+)\nFlip a coin. If tails, this Pokemon also does 20 damage to itself. If Heads, this attack does 20 more damage."],
+            weakness: "Px2",
+            resistance: nil,
+            retreatCost: 1,
+            effect: nil,
+            flavorText: nil
+        )))
+    }
+
+    @Test(arguments: [
+        ("Pokemon", PokemonDetails.Category.pokemon),
+        ("Item", .item),
+        ("Supporter", .supporter),
+        ("Stadium", .stadium),
+        ("Energy", .energy),
+    ])
+    func map_turnsPokemonCardTypeIntoCategory(cardType: String, expected: PokemonDetails.Category) throws {
+        let result = try map(details: ["cardType": [cardType]], gameSlug: "pokemon")
+
+        #expect(result?.pokemon?.category == expected)
+    }
+
+    @Test(arguments: [[], ["Character"]] as [[String]])
+    func map_deliversNoPokemonDetailsWithoutKnownCardType(cardTypes: [String]) throws {
+        #expect(try map(details: ["cardType": cardTypes], gameSlug: "pokemon") == nil)
+    }
+
+    @Test func map_keepsKnownEnergyTypesInOrderAndSkipsUnknownOnes() throws {
+        let result = try map(details: ["cardType": ["Pokemon"], "energyType": ["Water", "Shadow", "lightning"]], gameSlug: "pokemon")
+
+        #expect(result?.pokemon?.energyTypes == [.water, .lightning])
+    }
+
+    @Test func map_keepsPokemonAttacksInOrderAndSkipsEmptyOnes() throws {
+        let result = try map(details: ["cardType": ["Pokemon"], "attack1": "a first attack", "attack2": " <br> ", "attack4": "a <strong>last</strong> attack"], gameSlug: "pokemon")
+
+        #expect(result?.pokemon?.attacks == ["a first attack", "a **last** attack"])
+    }
+
+    @Test(arguments: ["", " ", "None", "none"])
+    func map_deliversNoPokemonTextValueWhenItIsEmptyOrNone(value: String) throws {
+        let result = try map(details: ["cardType": ["Pokemon"], "stage": value, "weakness": value, "resistance": value, "flavorText": value], gameSlug: "pokemon")
+
+        #expect(result == .pokemon(PokemonDetails(category: .pokemon)))
+    }
+
+    @Test func map_deliversPokemonTrainerEffectAndFlavorText() throws {
+        let result = try map(details: ["cardType": ["Supporter"], "description": "Draw 3 cards.\r\n<br><br>\r\nYou may play only 1 Supporter card per turn <em>(before your attack)</em>.", "flavorText": "A flavor text."], gameSlug: "pokemon")
+
+        #expect(result?.pokemon?.effect == "Draw 3 cards.\n\nYou may play only 1 Supporter card per turn *(before your attack)*.")
+        #expect(result?.pokemon?.flavorText == "A flavor text.")
+    }
+
+    // MARK: - Helpers
+    private func map(details: [String: Any]?, gameSlug: String? = "one-piece-card-game") throws -> GameDetails? {
+        try CardDetailsResponseMapper.map(makeResponseJSON(details: details, gameSlug: gameSlug), from: httpResponse(statusCode: 200))
+    }
+
+    private func makeResponseJSON(details: [String: Any]?, gameSlug: String? = "one-piece-card-game") -> Data {
+        try! JSONSerialization.data(withJSONObject: [
+            "card_id": 1,
+            "game_slug": gameSlug.map { $0 as Any } ?? NSNull(),
+            "details": details.map { $0 as Any } ?? NSNull(),
+        ])
     }
 }
 
@@ -132,6 +219,14 @@ private extension GameDetails {
     var onePiece: OnePieceDetails? {
         switch self {
         case let .onePiece(details): details
+        case .pokemon: nil
+        }
+    }
+
+    var pokemon: PokemonDetails? {
+        switch self {
+        case .onePiece: nil
+        case let .pokemon(details): details
         }
     }
 }

@@ -17,6 +17,11 @@ enum CardTextMarkdown {
         ("&amp;", "&"),
     ]
 
+    static func nonEmptyMarkdown(fromHTML html: String?) -> String? {
+        let markdown = html.map(markdown(fromHTML:)) ?? ""
+        return markdown.isEmpty ? nil : markdown
+    }
+
     static func markdown(fromHTML html: String) -> String {
         var text = html.replacing(/\r\n|\r|\n/, with: " ")
         text = text.replacing(/<br\s*\/?>/.ignoresCase(), with: "\n")

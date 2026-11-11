@@ -51,7 +51,7 @@ struct CardDetailsComposerTests {
     }
 
     private func makeResponseJSON(details: [String: Any]?) -> Data {
-        try! JSONSerialization.data(withJSONObject: ["card_id": 1, "details": details.map { $0 as Any } ?? NSNull()])
+        try! JSONSerialization.data(withJSONObject: ["card_id": 1, "game_slug": "one-piece-card-game", "details": details.map { $0 as Any } ?? NSNull()])
     }
 
     private final class Stub: URLProtocolStub {}
