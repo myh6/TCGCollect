@@ -13,7 +13,7 @@ public enum CardDetailsComposer {
         return RemoteLoader(
             client: client,
             makeRequest: { cardID in try CardDetailsEndpoint.details(cardID: cardID).urlRequest(baseURL: baseURL) },
-            map: { data, response in try CardDetailsResponseMapper.map(data, from: response, game: nil) }
+            map: CardDetailsResponseMapper.map
         )
     }
 }

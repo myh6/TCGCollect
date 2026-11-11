@@ -13,25 +13,29 @@ enum CardDetailsResponseMapper {
         case invalidData
     }
 
-    static func map(_ data: Data, from response: HTTPURLResponse, game: Game?) throws -> GameDetails? {
+    static func map(_ data: Data, from response: HTTPURLResponse) throws -> GameDetails? {
         guard response.statusCode == 200 else { throw Error.invalidData }
-        switch game {
-        case .onePiece, nil:
-            return try decode(RemoteOnePieceDetails.self, from: data)?.onePieceDetails.map(GameDetails.onePiece)
-        case .pokemon:
-            return try decode(RemotePokemonDetails.self, from: data)?.pokemonDetails.map(GameDetails.pokemon)
+        switch try decode(ResponseBody.self, from: data).game_slug {
+        case "one-piece-card-game":
+            return try decode(DetailsBody<RemoteOnePieceDetails>.self, from: data).details?.onePieceDetails.map(GameDetails.onePiece)
+        case "pokemon":
+            return try decode(DetailsBody<RemotePokemonDetails>.self, from: data).details?.pokemonDetails.map(GameDetails.pokemon)
+        default:
+            return nil
         }
     }
 
-    private static func decode<Details: Decodable>(_ type: Details.Type, from data: Data) throws -> Details? {
-        guard let body = try? JSONDecoder().decode(ResponseBody<Details>.self, from: data) else {
-            throw Error.invalidData
-        }
-        return body.details
+    private static func decode<Body: Decodable>(_ type: Body.Type, from data: Data) throws -> Body {
+        guard let body = try? JSONDecoder().decode(type, from: data) else { throw Error.invalidData }
+        return body
     }
 
-    private struct ResponseBody<Details: Decodable>: Decodable {
+    private struct ResponseBody: Decodable {
         let card_id: Int
+        let game_slug: String?
+    }
+
+    private struct DetailsBody<Details: Decodable>: Decodable {
         let details: Details?
     }
 
