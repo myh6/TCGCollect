@@ -39,6 +39,7 @@
 		0F5A73BD308A895000B42482 /* AppCore.xctestplan */ = {isa = PBXFileReference; lastKnownFileType = text; name = AppCore.xctestplan; path = Packages/AppCore.xctestplan; sourceTree = "<group>"; };
 		0F5A7400308A000000B42482 /* Secrets.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Secrets.xcconfig; sourceTree = "<group>"; };
 		0F5A7401308A000000B42482 /* Secrets.example.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Secrets.example.xcconfig; sourceTree = "<group>"; };
+		0FD006B930A4586700A3FF6F /* README.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = README.md; sourceTree = "<group>"; };
 		B8F1C2F46FC607DA48A8BAC4 /* HoloCard */ = {isa = PBXFileReference; lastKnownFileType = wrapper; name = HoloCard; path = Packages/HoloCard; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -56,6 +57,11 @@
 		0F04965A307CFDDE00378952 /* TCGCollectUITests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			path = TCGCollectUITests;
+			sourceTree = "<group>";
+		};
+		0FD006BA30A4587A00A3FF6F /* docs */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = docs;
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
@@ -90,6 +96,8 @@
 		0F049635307CFDDD00378952 = {
 			isa = PBXGroup;
 			children = (
+				0FD006BA30A4587A00A3FF6F /* docs */,
+				0FD006B930A4586700A3FF6F /* README.md */,
 				0F5A73BD308A895000B42482 /* AppCore.xctestplan */,
 				0F5A73983088A1A600B42482 /* scripts */,
 				0F5A739630889D9C00B42482 /* TCGCollect.xctestplan */,
