@@ -19,7 +19,6 @@ struct RemoteCard: Decodable {
     let set_name: String?
     let rarity: String?
     let printing: String?
-    let game_slug: String?
     // Optional, and the date kept as text: a card without a usable price is still a valid card.
     let current_price: String?
     let currency: String?
@@ -34,17 +33,8 @@ struct RemoteCard: Decodable {
             setName: set_name,
             imageURL: image_url,
             rarity: rarity,
-            printing: printing,
-            game: game
+            printing: printing
         )
-    }
-
-    private var game: Game? {
-        switch game_slug {
-        case "one-piece-card-game": .onePiece
-        case "pokemon": .pokemon
-        default: nil
-        }
     }
 
     /// nil when any price value is missing or can't be read.

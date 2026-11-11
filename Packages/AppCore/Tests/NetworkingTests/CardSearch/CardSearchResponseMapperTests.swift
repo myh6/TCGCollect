@@ -44,7 +44,6 @@ struct CardSearchResponseMapperTests {
             imageURL: URL(string: "https://an-image.com/card.png"),
             rarity: "L",
             printing: "a printing",
-            game: ("pokemon", .pokemon),
             price: "1234.50",
             currency: "JPY",
             fetchedAt: (Date(timeIntervalSince1970: 1_767_225_600), "2026-01-01T09:00:00+09:00")
@@ -81,16 +80,6 @@ struct CardSearchResponseMapperTests {
         let results = try CardSearchResponseMapper.map(makeResultsJSON([card.json]), from: httpResponse(statusCode: 200))
 
         #expect(results == [CardSearchResult(card: card.card, price: nil)])
-    }
-
-    @Test(arguments: [nil, "an-unknown-game"])
-    func map_deliversCardWithoutGameWhenGameSlugIsMissingOrUnknown(slug: String?) throws {
-        var card = makeRemoteCard(id: 0, name: "a card")
-        card.json["game_slug"] = slug ?? NSNull()
-
-        let results = try CardSearchResponseMapper.map(makeResultsJSON([card.json]), from: httpResponse(statusCode: 200))
-
-        #expect(results.map(\.card.game) == [nil])
     }
 
     @Test(arguments: [
