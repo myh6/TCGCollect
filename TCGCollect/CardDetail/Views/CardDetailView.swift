@@ -97,7 +97,9 @@ struct CardDetailContent: View {
                 .padding()
         case .loaded(.some(.onePiece(let details))):
             OnePieceDetailsSection(details: OnePieceDetailsPresentation(details))
-        case .loaded(.none), .loaded(.some(.pokemon)):
+        case .loaded(.some(.pokemon(let details))):
+            PokemonDetailsSection(details: PokemonDetailsPresentation(details))
+        case .loaded(.none):
             Text("No details for this card yet.")
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
@@ -329,6 +331,22 @@ private let previewShanksDetails = GameDetails.onePiece(OnePieceDetails(
     effect: "[Activate: Main] [Once Per Turn] DON!! −3 *(You may return the specified number of DON!! cards from your field to your DON!! deck.)*: All of your {FILM} type Characters gain +2000 power during this turn."
 ))
 
+private let previewPokemonDetails = GameDetails.pokemon(PokemonDetails(
+    category: .pokemon,
+    stage: "Basic",
+    hp: 60,
+    energyTypes: [.fighting],
+    attacks: ["[F] Thrash (20+)\nFlip a coin. If tails, this Pokemon also does 20 damage to itself. If Heads, this attack does 20 more damage."],
+    weakness: "Px2",
+    retreatCost: 1
+))
+
+private let previewSupporterDetails = GameDetails.pokemon(PokemonDetails(
+    category: .supporter,
+    effect: "Discard your hand and draw 7 cards.\n\nYou may play only 1 Supporter card per turn *(before your attack)*.",
+    flavorText: "A Pokémon Professor who researches the origins of Pokémon."
+))
+
 @MainActor
 private func detailView(_ card: Card, details: Result<GameDetails?, Error>?) -> some View {
     NavigationStack {
@@ -364,6 +382,29 @@ private func detailView(_ card: Card, details: Result<GameDetails?, Error>?) -> 
     detailView(
         Card(id: 1, name: "Luffy & Ace", number: "ST30-001", setName: "ST-30: Starter Deck 30 EX Luffy & Ace", rarity: "L", printing: "Normal"),
         details: .success(previewLeaderDetails)
+    )
+}
+
+#Preview("Pokémon with card image") {
+    detailView(
+        Card(
+            id: 17285,
+            name: "Mankey - 169/091",
+            number: "169/091",
+            setName: "SV: Paldean Fates",
+            imageURL: URL(string: "https://product-images.tcgplayer.com/fit-in/400x400/534728.jpg"),
+            rarity: "Shiny Rare",
+            printing: "Holofoil"
+        ),
+        details: .success(previewPokemonDetails)
+    )
+    .environment(\.imageLoader, ImageLoader(dataLoader: ImageComposer.makeRemoteImageDataLoader(), memoryCache: ImageMemoryCache()))
+}
+
+#Preview("Pokémon Supporter") {
+    detailView(
+        Card(id: 129, name: "Professor Juniper", number: "98/108", setName: "World Championship Decks", rarity: "Uncommon", printing: "Normal"),
+        details: .success(previewSupporterDetails)
     )
 }
 
