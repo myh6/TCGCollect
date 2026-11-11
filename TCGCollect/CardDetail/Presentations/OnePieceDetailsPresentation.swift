@@ -9,15 +9,10 @@ import Foundation
 import AppCore
 
 nonisolated struct OnePieceDetailsPresentation: Equatable {
-    struct Stat: Equatable {
-        let label: String
-        let value: String
-    }
-
     let category: String
     let colors: [OnePieceDetails.Color]
     let colorNames: String?
-    let stats: [Stat]
+    let stats: [DetailStat]
     let attributes: [String]
     let types: [String]
     let effect: String?
@@ -32,7 +27,7 @@ nonisolated struct OnePieceDetailsPresentation: Equatable {
             (String(localized: "Counter"), details.counter),
             (String(localized: "Life"), details.life),
         ].compactMap { label, value in
-            value.map { Stat(label: label, value: $0.formatted(.number.locale(locale))) }
+            value.map { DetailStat(label: label, value: $0.formatted(.number.locale(locale))) }
         }
         attributes = details.attributes
         types = details.types

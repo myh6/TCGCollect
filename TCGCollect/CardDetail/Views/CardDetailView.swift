@@ -124,7 +124,7 @@ struct OnePieceDetailsSection: View {
         VStack(alignment: .leading, spacing: 16) {
             categoryAndColors
             if !details.stats.isEmpty {
-                stats
+                StatTiles(stats: details.stats)
             }
             if !details.attributes.isEmpty || !details.types.isEmpty {
                 attributesAndTypes
@@ -152,24 +152,6 @@ struct OnePieceDetailsSection: View {
                 Text(colorNames)
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
-            }
-        }
-    }
-
-    private var stats: some View {
-        HStack(spacing: 12) {
-            ForEach(details.stats, id: \.label) { stat in
-                VStack(spacing: 2) {
-                    Text(stat.value)
-                        .font(.title3.weight(.semibold).monospacedDigit())
-                    Text(stat.label)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 10)
-                .background(.quaternary.opacity(0.6), in: RoundedRectangle(cornerRadius: 10))
-                .accessibilityElement(children: .combine)
             }
         }
     }
