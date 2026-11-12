@@ -23,7 +23,7 @@ struct ChatComposerTests {
         #expect(requests.map(\.url) == [URL(string: "http://base-url.com/v1/ask")!])
         #expect(requests.map(\.httpMethod) == ["POST"])
         #expect(requests.map { $0.value(forHTTPHeaderField: "X-API-Key") } == ["an api key"])
-        #expect(Stub.requestJSONBodies == [["question": "a question"]])
+        #expect(Stub.requestJSONBodies == [["question": "a question", "history": []]])
     }
 
     @Test func makeRemoteChatLoader_deliversAnswerWithSuggestionsFromBackend() async throws {
