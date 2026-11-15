@@ -106,7 +106,7 @@ struct ChatUnavailableView: View {
 private nonisolated struct PreviewLoader: ChatLoader {
     let result: Result<ChatAnswer, Error>?
 
-    func load(question: String) async throws -> ChatAnswer {
+    func load(question: String, history: [ChatExchange]) async throws -> ChatAnswer {
         guard let result else {
             try await Task.sleep(for: .seconds(3600))
             throw CancellationError()

@@ -8,5 +8,5 @@
 import Domain
 
 public protocol ChatLoader {
-    func load(question: String) async throws -> ChatAnswer
+    func load(question: String, history: [ChatExchange]) async throws -> ChatAnswer
 }

@@ -18,7 +18,7 @@ struct ChatEndToEndTests {
         // Same composition the app uses, including its real URLSession.
         let sut = ChatComposer.makeRemoteChatLoader(baseURL: try #require(EndToEndEnvironment.baseURL), apiKey: try #require(EndToEndEnvironment.apiKey))
 
-        let answer = try await sut.load(question: question)
+        let answer = try await sut.load(question: question, history: [])
 
         // The dev-mode answer echoes the question, which proves it went through the whole round trip.
         #expect(answer.text.contains(question))

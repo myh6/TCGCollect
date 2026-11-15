@@ -36,7 +36,7 @@ final class ChatViewModel {
         let stateBeforeSending = state
         state = .loading
         // Its own task, so cancel() can stop it; URLSession cancels the network request with it.
-        let task = Task { [loader] in try await loader.load(question: question) }
+        let task = Task { [loader] in try await loader.load(question: question, history: []) }
         loadTask = task
         defer { loadTask = nil }
 

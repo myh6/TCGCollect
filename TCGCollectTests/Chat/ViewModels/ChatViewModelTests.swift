@@ -191,7 +191,7 @@ struct ChatViewModelTests {
             super.init(callName: "request")
         }
 
-        func load(question: String) async throws -> ChatAnswer {
+        func load(question: String, history: [ChatExchange]) async throws -> ChatAnswer {
             try await call(with: question)
         }
     }
