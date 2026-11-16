@@ -57,7 +57,10 @@ final class ChatViewModel {
         // Its own task, so cancel() can stop it; URLSession cancels the network request with it.
         let task = Task { [loader] in try await loader.load(question: question) }
         loadTask = task
-        defer { loadTask = nil }
+        defer {
+            // A new chat may have sent another question by now; leave its task alone.
+            if loadTask == task { loadTask = nil }
+        }
 
         let reply: Turn.Reply
         do {
@@ -83,5 +86,13 @@ final class ChatViewModel {
     /// Stops the request in progress and marks its question as cancelled. Does nothing when there is none.
     func cancel() {
         loadTask?.cancel()
+    }
+
+    /// Clears the conversation, stopping any question still waiting, so the next question starts without history.
+    func startNewChat() {
+        cancel()
+        loadTask = nil
+        turns = []
+        loader.startNewConversation()
     }
 }

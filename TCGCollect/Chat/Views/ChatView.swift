@@ -31,6 +31,10 @@ struct ChatView: View {
                 .padding()
         }
         .navigationTitle("Chat")
+        .toolbar {
+            Button("New Chat", systemImage: "square.and.pencil", action: viewModel.startNewChat)
+                .disabled(viewModel.turns.isEmpty)
+        }
     }
 
     private var conversation: some View {
@@ -161,6 +165,8 @@ private nonisolated struct PreviewLoader: ConversationLoader {
         }
         return try result.get()
     }
+
+    func startNewConversation() {}
 }
 
 #Preview("Idle") {

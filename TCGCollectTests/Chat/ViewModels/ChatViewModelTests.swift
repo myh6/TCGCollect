@@ -178,6 +178,54 @@ struct ChatViewModelTests {
         await sending.value
     }
 
+    @Test func startNewChat_clearsTurnsAndStartsNewConversation() async {
+        let (sut, loader) = makeSUT()
+        await send(to: sut, loader: loader, completingWith: .success(makeAnswer("an answer")))
+
+        sut.startNewChat()
+
+        #expect(sut.turns.isEmpty)
+        #expect(loader.newConversationCount == 1)
+    }
+
+    @Test func startNewChat_cancelsPendingRequest() async {
+        let (sut, loader) = makeSUT()
+        let sending = await startSending(to: sut, loader: loader)
+
+        sut.startNewChat()
+        #expect(loader.cancelledCalls == [0])
+        #expect(!sut.isWaitingForAnswer)
+
+        loader.complete(with: .failure(URLError(.cancelled)))
+        await sending.value
+    }
+
+    @Test func startNewChat_ignoresReplyToQuestionFromPreviousChat() async {
+        let (sut, loader) = makeSUT()
+        let sending = await startSending(to: sut, loader: loader)
+
+        sut.startNewChat()
+        loader.complete(with: .success(makeAnswer("a late answer")))
+        await sending.value
+
+        #expect(sut.turns.isEmpty)
+    }
+
+    @Test func cancel_cancelsQuestionSentAfterNewChatWhilePreviousOneWasFinishing() async {
+        let (sut, loader) = makeSUT()
+        let previousSending = await startSending("a previous question", to: sut, loader: loader)
+        sut.startNewChat()
+        let sending = await startSending(to: sut, loader: loader, at: 1)
+        loader.complete(with: .failure(URLError(.cancelled)))
+        await previousSending.value
+
+        sut.cancel()
+        #expect(loader.cancelledCalls == [0, 1])
+
+        loader.complete(with: .failure(URLError(.cancelled)), at: 1)
+        await sending.value
+    }
+
     // MARK: - Helpers
     private func makeSUT() -> (sut: ChatViewModel, loader: LoaderSpy) {
         let loader = LoaderSpy()
@@ -210,6 +258,7 @@ struct ChatViewModelTests {
 
     private final class LoaderSpy: HeldCalls<String, ChatAnswer>, ConversationLoader {
         var questions: [String] { inputs }
+        private(set) var newConversationCount = 0
 
         init() {
             super.init(callName: "request")
@@ -217,6 +266,10 @@ struct ChatViewModelTests {
 
         func load(question: String) async throws -> ChatAnswer {
             try await call(with: question)
+        }
+
+        func startNewConversation() {
+            newConversationCount += 1
         }
     }
 }

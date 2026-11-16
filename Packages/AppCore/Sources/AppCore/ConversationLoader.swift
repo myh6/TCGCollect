@@ -9,4 +9,5 @@ import Domain
 
 public protocol ConversationLoader {
     func load(question: String) async throws -> ChatAnswer
+    func startNewConversation()
 }

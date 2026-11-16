@@ -27,4 +27,8 @@ public final class RememberingChatLoader: ConversationLoader {
         }
         return answer
     }
+
+    public func startNewConversation() {
+        history = []
+    }
 }

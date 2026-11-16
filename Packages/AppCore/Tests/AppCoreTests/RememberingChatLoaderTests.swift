@@ -82,6 +82,16 @@ struct RememberingChatLoaderTests {
         #expect(loader.requests.last?.history == [ChatExchange(question: "a question", answer: makeAnswer("an answer"))])
     }
 
+    @Test func load_sendsNoHistoryAfterStartingNewConversation() async throws {
+        let (sut, loader) = makeSUT(results: [.success(makeAnswer("an answer")), .success(makeAnswer("another answer"))])
+        _ = try await sut.load(question: "a question")
+
+        sut.startNewConversation()
+        _ = try await sut.load(question: "a new question")
+
+        #expect(loader.requests.last?.history == [])
+    }
+
     // The user cancelled, so an answer that still arrives isn't part of the conversation.
     @Test func load_leavesAnswerArrivingAfterCancelOutOfHistory() async throws {
         let (sut, loader) = makeSUT(results: [.success(makeAnswer("a late answer")), .success(makeAnswer("an answer"))])
