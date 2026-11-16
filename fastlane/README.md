@@ -1,0 +1,54 @@
+fastlane documentation
+----
+
+# Installation
+
+Make sure you have the latest version of the Xcode command line tools installed:
+
+```sh
+xcode-select --install
+```
+
+For _fastlane_ installation instructions, see [Installing _fastlane_](https://docs.fastlane.tools/#installing-fastlane)
+
+# Available Actions
+
+## iOS
+
+### ios ci
+
+```sh
+[bundle exec] fastlane ios ci
+```
+
+Runs every unit test: the AppCore and HoloCard packages' and the app's TCGCollectTests on an iOS Simulator
+
+Set SIMULATOR_ID=<udid> to pick a simulator; otherwise fastlane picks an available iPhone
+
+### ios build
+
+```sh
+[bundle exec] fastlane ios build
+```
+
+Builds an unsigned Release app for the iOS Simulator and zips it into build/artifacts
+
+Install it with: unzip the file, then xcrun simctl install booted TCGCollect.app
+
+### ios release
+
+```sh
+[bundle exec] fastlane ios release
+```
+
+Releases a new version: tests, bumps the version, builds, tags, creates a GitHub Release, then updates Jira tickets
+
+Options: bump:patch|minor|major (default patch), dry_run:true|false (default true: only logs what it would change)
+
+----
+
+This README.md is auto-generated and will be re-generated every time [_fastlane_](https://fastlane.tools) is run.
+
+More information about _fastlane_ can be found on [fastlane.tools](https://fastlane.tools).
+
+The documentation of _fastlane_ can be found on [docs.fastlane.tools](https://docs.fastlane.tools).

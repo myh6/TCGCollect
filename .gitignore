@@ -18,3 +18,11 @@ build/
 .env
 *.secrets.xcconfig
 Secrets.xcconfig
+
+# fastlane output (test results go to build/)
+fastlane/report.xml
+fastlane/test_output/
+
+# Bundler: gems install into vendor/bundle; .bundle/config is per machine
+vendor/bundle/
+.bundle/
