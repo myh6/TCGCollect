@@ -30,6 +30,73 @@ struct ChatViewModelTests {
         #expect(loader.questions == ["a question"])
     }
 
+    @Test func send_sendsNoHistoryWithFirstQuestion() async {
+        let (sut, loader) = makeSUT()
+
+        await send(to: sut, loader: loader, completingWith: .success(makeAnswer("an answer")))
+
+        #expect(loader.histories == [[]])
+    }
+
+    @Test func send_sendsPreviousExchangeWithNextQuestion() async {
+        let (sut, loader) = makeSUT()
+        await send("a question", to: sut, loader: loader, completingWith: .success(makeAnswer("an answer")))
+
+        await send("a follow-up", to: sut, loader: loader, at: 1, completingWith: .success(makeAnswer("another answer")))
+
+        #expect(loader.histories.last == [ChatExchange(question: "a question", answer: makeAnswer("an answer"))])
+    }
+
+    @Test func send_sendsEveryPreviousExchangeInOrder() async {
+        let (sut, loader) = makeSUT()
+        await send("a question", to: sut, loader: loader, completingWith: .success(makeAnswer("an answer")))
+        await send("a follow-up", to: sut, loader: loader, at: 1, completingWith: .success(makeAnswer("another answer")))
+
+        await send("a third question", to: sut, loader: loader, at: 2, completingWith: .success(makeAnswer("a third answer")))
+
+        #expect(loader.histories.last == [
+            ChatExchange(question: "a question", answer: makeAnswer("an answer")),
+            ChatExchange(question: "a follow-up", answer: makeAnswer("another answer")),
+        ])
+    }
+
+    @Test func send_sendsOnlyLatestExchangesUpToHistoryLimit() async {
+        let (sut, loader) = makeSUT(historyLimit: 2)
+        await send("question 1", to: sut, loader: loader, completingWith: .success(makeAnswer("answer 1")))
+        await send("question 2", to: sut, loader: loader, at: 1, completingWith: .success(makeAnswer("answer 2")))
+        await send("question 3", to: sut, loader: loader, at: 2, completingWith: .success(makeAnswer("answer 3")))
+
+        await send("question 4", to: sut, loader: loader, at: 3, completingWith: .success(makeAnswer("answer 4")))
+
+        #expect(loader.histories.last == [
+            ChatExchange(question: "question 2", answer: makeAnswer("answer 2")),
+            ChatExchange(question: "question 3", answer: makeAnswer("answer 3")),
+        ])
+    }
+
+    @Test func send_keepsPreviousExchangeAfterFailure() async {
+        let (sut, loader) = makeSUT()
+        await send("a question", to: sut, loader: loader, completingWith: .success(makeAnswer("an answer")))
+        await send("a failing question", to: sut, loader: loader, at: 1, completingWith: .failure(anyError()))
+
+        await send("a follow-up", to: sut, loader: loader, at: 2, completingWith: .success(makeAnswer("another answer")))
+
+        #expect(loader.histories.last == [ChatExchange(question: "a question", answer: makeAnswer("an answer"))])
+    }
+
+    @Test func send_keepsPreviousExchangeAfterCancel() async {
+        let (sut, loader) = makeSUT()
+        await send("a question", to: sut, loader: loader, completingWith: .success(makeAnswer("an answer")))
+        let cancelledSending = await startSending("a cancelled question", to: sut, loader: loader, at: 1)
+        sut.cancel()
+        loader.complete(with: .success(makeAnswer("a late answer")), at: 1)
+        await cancelledSending.value
+
+        await send("a follow-up", to: sut, loader: loader, at: 2, completingWith: .success(makeAnswer("another answer")))
+
+        #expect(loader.histories.last == [ChatExchange(question: "a question", answer: makeAnswer("an answer"))])
+    }
+
     @Test func send_trimsWhitespaceAroundQuestion() async {
         let (sut, loader) = makeSUT()
         await send("  a question \n", to: sut, loader: loader, completingWith: .success(makeAnswer("an answer")))
@@ -155,9 +222,9 @@ struct ChatViewModelTests {
     }
 
     // MARK: - Helpers
-    private func makeSUT() -> (sut: ChatViewModel, loader: LoaderSpy) {
+    private func makeSUT(historyLimit: Int = 5) -> (sut: ChatViewModel, loader: LoaderSpy) {
         let loader = LoaderSpy()
-        let sut = ChatViewModel(loader: loader)
+        let sut = ChatViewModel(loader: loader, historyLimit: historyLimit)
         return (sut, loader)
     }
 
@@ -172,11 +239,11 @@ struct ChatViewModelTests {
     }
 
     private func send(
-        _ question: String = "a question", to sut: ChatViewModel, loader: LoaderSpy, completingWith result: Result<ChatAnswer, Error>,
+        _ question: String = "a question", to sut: ChatViewModel, loader: LoaderSpy, at index: Int = 0, completingWith result: Result<ChatAnswer, Error>,
         sourceLocation: SourceLocation = #_sourceLocation
     ) async {
-        let sending = await startSending(question, to: sut, loader: loader, sourceLocation: sourceLocation)
-        loader.complete(with: result)
+        let sending = await startSending(question, to: sut, loader: loader, at: index, sourceLocation: sourceLocation)
+        loader.complete(with: result, at: index)
         await sending.value
     }
 
@@ -184,15 +251,16 @@ struct ChatViewModelTests {
         NSError(domain: "any error", code: 0)
     }
 
-    private final class LoaderSpy: HeldCalls<String, ChatAnswer>, ChatLoader {
-        var questions: [String] { inputs }
+    private final class LoaderSpy: HeldCalls<(question: String, history: [ChatExchange]), ChatAnswer>, ChatLoader {
+        var questions: [String] { inputs.map(\.question) }
+        var histories: [[ChatExchange]] { inputs.map(\.history) }
 
         init() {
             super.init(callName: "request")
         }
 
         func load(question: String, history: [ChatExchange]) async throws -> ChatAnswer {
-            try await call(with: question)
+            try await call(with: (question, history))
         }
     }
 }

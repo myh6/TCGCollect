@@ -24,9 +24,12 @@ final class ChatViewModel {
 
     private let loader: ChatLoader
     private var loadTask: Task<ChatAnswer, Error>?
+    private var history = [ChatExchange]()
+    private let historyLimit: Int
 
-    init(loader: ChatLoader) {
+    init(loader: ChatLoader, historyLimit: Int = 5) {
         self.loader = loader
+        self.historyLimit = historyLimit
     }
 
     func send(_ question: String) async {
@@ -36,7 +39,7 @@ final class ChatViewModel {
         let stateBeforeSending = state
         state = .loading
         // Its own task, so cancel() can stop it; URLSession cancels the network request with it.
-        let task = Task { [loader] in try await loader.load(question: question, history: []) }
+        let task = Task { [loader, history] in try await loader.load(question: question, history: history) }
         loadTask = task
         defer { loadTask = nil }
 
@@ -48,6 +51,7 @@ final class ChatViewModel {
                 return
             }
             state = .loaded(answer: answer)
+            history = Array((history + [ChatExchange(question: question, answer: answer)]).suffix(historyLimit))
         } catch {
             // Whatever the loader throws after a cancel, the user asked for it: not an error to show.
             guard !task.isCancelled else {
