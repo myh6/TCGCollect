@@ -51,3 +51,17 @@ End-to-end tests call a real backend. They skip themselves unless you set these 
 E2E_BASE_URL=https://your-backend E2E_API_KEY=your-key \
   swift test --package-path Packages/AppCore --filter NetworkingEndToEndTests
 ```
+
+## CI/CD
+
+Everything runs through fastlane lanes, locally and on GitHub Actions.
+
+| Lane | What it does | Where it runs |
+| --- | --- | --- |
+| `ci` | Package and app unit tests, JUnit reports in `build/test-results/` | Every pull request into `main` |
+| `build` | Unsigned Release app for the iOS Simulator, zipped into `build/artifacts/` | Every pull request into `main` |
+| `release` | Tests, bumps the version, builds, tags `vX.Y.Z`, publishes a GitHub Release, moves the Jira tickets named in commit messages (e.g. `TCG-12`) to Done | By hand: Actions → Release |
+
+Each lane posts its result to Slack when `SLACK_URL` is set. The release workflow runs as a dry run unless you untick it: it reports the version and the Jira tickets it would change, and changes nothing.
+
+There's no App Store or TestFlight step yet, since that needs a paid Apple Developer account.
