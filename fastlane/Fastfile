@@ -20,6 +20,32 @@ platform :ios do
       xcargs: "CODE_SIGNING_ALLOWED=NO"
     )
   end
+
+  desc "Builds an unsigned Release app for the iOS Simulator and zips it into build/artifacts"
+  desc "Install it with: unzip the file, then xcrun simctl install booted TCGCollect.app"
+  lane :build do
+    build_app(
+      project: "TCGCollect.xcodeproj",
+      scheme: "TCGCollect",
+      configuration: "Release",
+      destination: "generic/platform=iOS Simulator",
+      derived_data_path: "build/DerivedData",
+      skip_archive: true,
+      skip_codesigning: true,
+      skip_package_ipa: true,
+      xcargs: "CODE_SIGNING_ALLOWED=NO"
+    )
+
+    app = File.expand_path("../build/DerivedData/Build/Products/Release-iphonesimulator/TCGCollect.app", __dir__)
+    version = info_plist_value(app, "CFBundleShortVersionString")
+    build_number = info_plist_value(app, "CFBundleVersion")
+    artifacts = File.expand_path("../build/artifacts", __dir__)
+    FileUtils.mkdir_p(artifacts)
+    zip_path = File.join(artifacts, "TCGCollect-#{version}-#{build_number}-simulator.zip")
+    sh("ditto", "-c", "-k", "--keepParent", app, zip_path)
+    UI.success("Simulator app: #{zip_path}")
+    zip_path
+  end
 end
 
 # The app's Debug build reads Secrets.xcconfig. CI has none, so use the template's placeholder values.
@@ -42,6 +68,10 @@ def test_package(name)
     "--package-path", File.expand_path("../Packages/#{name}", __dir__),
     "--xunit-output", File.join(results, "#{name}.xml")
   )
+end
+
+def info_plist_value(app, key)
+  sh("/usr/libexec/PlistBuddy", "-c", "Print :#{key}", File.join(app, "Info.plist"), log: false).strip
 end
 
 def simulator_destination

@@ -25,6 +25,16 @@ Runs every unit test: the AppCore and HoloCard packages' and the app's TCGCollec
 
 Set SIMULATOR_ID=<udid> to pick a simulator; otherwise fastlane picks an available iPhone
 
+### ios build
+
+```sh
+[bundle exec] fastlane ios build
+```
+
+Builds an unsigned Release app for the iOS Simulator and zips it into build/artifacts
+
+Install it with: unzip the file, then xcrun simctl install booted TCGCollect.app
+
 ----
 
 This README.md is auto-generated and will be re-generated every time [_fastlane_](https://fastlane.tools) is run.
