@@ -15,10 +15,11 @@ import AppCore
 @Suite(.timeLimit(.minutes(1)))
 struct ChatViewModelTests {
 
-    @Test func init_startsIdleWithoutRequestingAnswer() {
+    @Test func init_startsWithoutTurnsOrRequests() {
         let (sut, loader) = makeSUT()
 
-        #expect(sut.state == .idle)
+        #expect(sut.turns.isEmpty)
+        #expect(!sut.isWaitingForAnswer)
         #expect(loader.questions.isEmpty)
     }
 
@@ -30,78 +31,12 @@ struct ChatViewModelTests {
         #expect(loader.questions == ["a question"])
     }
 
-    @Test func send_sendsNoHistoryWithFirstQuestion() async {
-        let (sut, loader) = makeSUT()
-
-        await send(to: sut, loader: loader, completingWith: .success(makeAnswer("an answer")))
-
-        #expect(loader.histories == [[]])
-    }
-
-    @Test func send_sendsPreviousExchangeWithNextQuestion() async {
-        let (sut, loader) = makeSUT()
-        await send("a question", to: sut, loader: loader, completingWith: .success(makeAnswer("an answer")))
-
-        await send("a follow-up", to: sut, loader: loader, at: 1, completingWith: .success(makeAnswer("another answer")))
-
-        #expect(loader.histories.last == [ChatExchange(question: "a question", answer: makeAnswer("an answer"))])
-    }
-
-    @Test func send_sendsEveryPreviousExchangeInOrder() async {
-        let (sut, loader) = makeSUT()
-        await send("a question", to: sut, loader: loader, completingWith: .success(makeAnswer("an answer")))
-        await send("a follow-up", to: sut, loader: loader, at: 1, completingWith: .success(makeAnswer("another answer")))
-
-        await send("a third question", to: sut, loader: loader, at: 2, completingWith: .success(makeAnswer("a third answer")))
-
-        #expect(loader.histories.last == [
-            ChatExchange(question: "a question", answer: makeAnswer("an answer")),
-            ChatExchange(question: "a follow-up", answer: makeAnswer("another answer")),
-        ])
-    }
-
-    @Test func send_sendsOnlyLatestExchangesUpToHistoryLimit() async {
-        let (sut, loader) = makeSUT(historyLimit: 2)
-        await send("question 1", to: sut, loader: loader, completingWith: .success(makeAnswer("answer 1")))
-        await send("question 2", to: sut, loader: loader, at: 1, completingWith: .success(makeAnswer("answer 2")))
-        await send("question 3", to: sut, loader: loader, at: 2, completingWith: .success(makeAnswer("answer 3")))
-
-        await send("question 4", to: sut, loader: loader, at: 3, completingWith: .success(makeAnswer("answer 4")))
-
-        #expect(loader.histories.last == [
-            ChatExchange(question: "question 2", answer: makeAnswer("answer 2")),
-            ChatExchange(question: "question 3", answer: makeAnswer("answer 3")),
-        ])
-    }
-
-    @Test func send_keepsPreviousExchangeAfterFailure() async {
-        let (sut, loader) = makeSUT()
-        await send("a question", to: sut, loader: loader, completingWith: .success(makeAnswer("an answer")))
-        await send("a failing question", to: sut, loader: loader, at: 1, completingWith: .failure(anyError()))
-
-        await send("a follow-up", to: sut, loader: loader, at: 2, completingWith: .success(makeAnswer("another answer")))
-
-        #expect(loader.histories.last == [ChatExchange(question: "a question", answer: makeAnswer("an answer"))])
-    }
-
-    @Test func send_keepsPreviousExchangeAfterCancel() async {
-        let (sut, loader) = makeSUT()
-        await send("a question", to: sut, loader: loader, completingWith: .success(makeAnswer("an answer")))
-        let cancelledSending = await startSending("a cancelled question", to: sut, loader: loader, at: 1)
-        sut.cancel()
-        loader.complete(with: .success(makeAnswer("a late answer")), at: 1)
-        await cancelledSending.value
-
-        await send("a follow-up", to: sut, loader: loader, at: 2, completingWith: .success(makeAnswer("another answer")))
-
-        #expect(loader.histories.last == [ChatExchange(question: "a question", answer: makeAnswer("an answer"))])
-    }
-
     @Test func send_trimsWhitespaceAroundQuestion() async {
         let (sut, loader) = makeSUT()
         await send("  a question \n", to: sut, loader: loader, completingWith: .success(makeAnswer("an answer")))
 
         #expect(loader.questions == ["a question"])
+        #expect(sut.turns.map(\.question) == ["a question"])
     }
 
     @Test(arguments: ["", "   ", "\n"])
@@ -112,14 +47,15 @@ struct ChatViewModelTests {
         await sut.send(question)
 
         #expect(loader.questions.isEmpty)
-        #expect(sut.state == .idle)
+        #expect(sut.turns.isEmpty)
     }
 
-    @Test func send_isLoadingWhileWaitingForAnswer() async {
+    @Test func send_showsQuestionWaitingForAnswer() async {
         let (sut, loader) = makeSUT()
 
         let sending = await startSending(to: sut, loader: loader)
-        #expect(sut.state == .loading)
+        #expect(replies(of: sut) == [.waiting])
+        #expect(sut.isWaitingForAnswer)
 
         loader.complete(with: .success(makeAnswer("an answer")))
         await sending.value
@@ -131,7 +67,8 @@ struct ChatViewModelTests {
 
         await send(to: sut, loader: loader, completingWith: .success(answer))
 
-        #expect(sut.state == .loaded(answer: answer))
+        #expect(replies(of: sut) == [.answered(answer)])
+        #expect(!sut.isWaitingForAnswer)
     }
 
     @Test func send_deliversCouldNotLoadAnswerErrorOnLoaderFailure() async {
@@ -139,27 +76,28 @@ struct ChatViewModelTests {
 
         await send(to: sut, loader: loader, completingWith: .failure(anyError()))
 
-        #expect(sut.state == .failed(.couldNotLoadAnswer))
+        #expect(replies(of: sut) == [.failed(.couldNotLoadAnswer)])
     }
 
-    @Test func send_replacesPreviousErrorWithLoadingWhenSendingAgain() async {
+    @Test func send_keepsEarlierTurnsInOrder() async {
         let (sut, loader) = makeSUT()
-        await send(to: sut, loader: loader, completingWith: .failure(anyError()))
+        await send("a question", to: sut, loader: loader, completingWith: .success(makeAnswer("an answer")))
+        await send("a failing question", to: sut, loader: loader, at: 1, completingWith: .failure(anyError()))
 
-        let sending = await startSending(to: sut, loader: loader, at: 1)
-        #expect(sut.state == .loading)
+        await send("a follow-up", to: sut, loader: loader, at: 2, completingWith: .success(makeAnswer("another answer")))
 
-        loader.complete(with: .success(makeAnswer("an answer")), at: 1)
-        await sending.value
+        #expect(sut.turns.map(\.question) == ["a question", "a failing question", "a follow-up"])
+        #expect(replies(of: sut) == [.answered(makeAnswer("an answer")), .failed(.couldNotLoadAnswer), .answered(makeAnswer("another answer"))])
     }
 
-    @Test func send_ignoresSendWhileLoading() async {
+    @Test func send_ignoresSendWhileWaitingForAnswer() async {
         let (sut, loader) = makeSUT()
         let firstSending = await startSending(to: sut, loader: loader)
         loader.setCompletionForNewCalls(to: .success(makeAnswer("an answer")))
 
         await sut.send("another question")
         #expect(loader.questions == ["a question"])
+        #expect(sut.turns.map(\.question) == ["a question"])
 
         loader.complete(with: .success(makeAnswer("an answer")))
         await firstSending.value
@@ -171,7 +109,7 @@ struct ChatViewModelTests {
         sut.cancel()
 
         #expect(loader.cancelledCalls.isEmpty)
-        #expect(sut.state == .idle)
+        #expect(sut.turns.isEmpty)
     }
 
     @Test func cancel_cancelsPendingRequest() async {
@@ -186,46 +124,69 @@ struct ChatViewModelTests {
     }
 
     // URLSession reports a cancelled request as URLError(.cancelled); the user asked for it, so it isn't an error to show.
-    @Test func cancel_returnsToIdleWithoutShowingError() async {
-        let (sut, loader) = makeSUT()
-        let sending = await startSending(to: sut, loader: loader)
-
-        sut.cancel()
-        loader.complete(with: .failure(URLError(.cancelled)))
-        await sending.value
-
-        #expect(sut.state == .idle)
-    }
-
-    @Test func cancel_ignoresAnswerArrivingAfterCancel() async {
-        let (sut, loader) = makeSUT()
-        let sending = await startSending(to: sut, loader: loader)
-
-        sut.cancel()
-        loader.complete(with: .success(makeAnswer("a late answer")))
-        await sending.value
-
-        #expect(sut.state == .idle)
-    }
-
     @Test(arguments: [Result<ChatAnswer, Error>.failure(URLError(.cancelled)), .success(makeAnswer("a late answer"))])
-    func cancel_restoresPreviousAnswer(lateResult: Result<ChatAnswer, Error>) async {
+    func cancel_marksQuestionCancelledWhateverArrivesAfter(lateResult: Result<ChatAnswer, Error>) async {
         let (sut, loader) = makeSUT()
         await send(to: sut, loader: loader, completingWith: .success(makeAnswer("an answer")))
+        let sending = await startSending("another question", to: sut, loader: loader, at: 1)
 
-        let sending = await startSending(to: sut, loader: loader, at: 1)
         sut.cancel()
         loader.complete(with: lateResult, at: 1)
         await sending.value
 
-        #expect(sut.state == .loaded(answer: makeAnswer("an answer")))
+        #expect(replies(of: sut) == [.answered(makeAnswer("an answer")), .cancelled])
+        #expect(!sut.isWaitingForAnswer)
+    }
+
+    @Test func retry_asksUnansweredQuestionAgainAtEndOfConversation() async {
+        let (sut, loader) = makeSUT()
+        await send("a failing question", to: sut, loader: loader, completingWith: .failure(anyError()))
+        await send("a question", to: sut, loader: loader, at: 1, completingWith: .success(makeAnswer("an answer")))
+        let failedTurn = sut.turns[0]
+
+        let retrying = Task { await sut.retry(failedTurn) }
+        await loader.waitForCall(at: 2)
+        loader.complete(with: .success(makeAnswer("a retried answer")), at: 2)
+        await retrying.value
+
+        #expect(loader.questions.last == "a failing question")
+        #expect(sut.turns.map(\.question) == ["a question", "a failing question"])
+        #expect(replies(of: sut) == [.answered(makeAnswer("an answer")), .answered(makeAnswer("a retried answer"))])
+    }
+
+    @Test func retry_ignoresAnsweredQuestion() async {
+        let (sut, loader) = makeSUT()
+        await send(to: sut, loader: loader, completingWith: .success(makeAnswer("an answer")))
+        loader.setCompletionForNewCalls(to: .success(makeAnswer("another answer")))
+
+        await sut.retry(sut.turns[0])
+
+        #expect(loader.questions == ["a question"])
+        #expect(replies(of: sut) == [.answered(makeAnswer("an answer"))])
+    }
+
+    @Test func retry_ignoresRetryWhileWaitingForAnswer() async {
+        let (sut, loader) = makeSUT()
+        await send("a failing question", to: sut, loader: loader, completingWith: .failure(anyError()))
+        let sending = await startSending(to: sut, loader: loader, at: 1)
+        loader.setCompletionForNewCalls(to: .success(makeAnswer("an answer")))
+
+        await sut.retry(sut.turns[0])
+        #expect(loader.questions == ["a failing question", "a question"])
+
+        loader.complete(with: .success(makeAnswer("an answer")), at: 1)
+        await sending.value
     }
 
     // MARK: - Helpers
-    private func makeSUT(historyLimit: Int = 5) -> (sut: ChatViewModel, loader: LoaderSpy) {
+    private func makeSUT() -> (sut: ChatViewModel, loader: LoaderSpy) {
         let loader = LoaderSpy()
-        let sut = ChatViewModel(loader: loader, historyLimit: historyLimit)
+        let sut = ChatViewModel(loader: loader)
         return (sut, loader)
+    }
+
+    private func replies(of sut: ChatViewModel) -> [ChatViewModel.Turn.Reply] {
+        sut.turns.map(\.reply)
     }
 
     /// Starts sending `question` and returns once the loader has received request number `index`, which is still waiting.
@@ -247,20 +208,15 @@ struct ChatViewModelTests {
         await sending.value
     }
 
-    private func anyError() -> Error {
-        NSError(domain: "any error", code: 0)
-    }
-
-    private final class LoaderSpy: HeldCalls<(question: String, history: [ChatExchange]), ChatAnswer>, ChatLoader {
-        var questions: [String] { inputs.map(\.question) }
-        var histories: [[ChatExchange]] { inputs.map(\.history) }
+    private final class LoaderSpy: HeldCalls<String, ChatAnswer>, ConversationLoader {
+        var questions: [String] { inputs }
 
         init() {
             super.init(callName: "request")
         }
 
-        func load(question: String, history: [ChatExchange]) async throws -> ChatAnswer {
-            try await call(with: (question, history))
+        func load(question: String) async throws -> ChatAnswer {
+            try await call(with: question)
         }
     }
 }
@@ -275,4 +231,8 @@ private func makeSuggestion(cardID: Int) -> ChatAnswer.Suggestion {
         card: Card(id: cardID, name: "card \(cardID)"),
         price: PricePoint(cardID: cardID, date: Date(timeIntervalSince1970: 0), price: Money(amount: 1, currencyCode: "USD"))
     )
+}
+
+private func anyError() -> Error {
+    NSError(domain: "any error", code: 0)
 }
