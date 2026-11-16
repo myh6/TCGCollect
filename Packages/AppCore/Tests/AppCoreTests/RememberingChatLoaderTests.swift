@@ -121,7 +121,6 @@ struct RememberingChatLoaderTests {
         }
 
         private(set) var requests = [Request]()
-        /// Cancels the calling task while the next request is in flight, like the user tapping Cancel.
         var cancelsTaskOnNextCall = false
         private var results: [Result<ChatAnswer, Error>]
 

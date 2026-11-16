@@ -54,21 +54,15 @@ final class ChatViewModel {
         let turnID = nextTurnID
         nextTurnID += 1
         turns.append(Turn(id: turnID, question: question, reply: .waiting))
-        // Its own task, so cancel() can stop it; URLSession cancels the network request with it.
         let task = Task { [loader] in try await loader.load(question: question) }
         loadTask = task
-        defer {
-            // A new chat may have sent another question by now; leave its task alone.
-            if loadTask == task { loadTask = nil }
-        }
+        defer { if loadTask == task { loadTask = nil } }
 
         let reply: Turn.Reply
         do {
             let answer = try await task.value
-            // The user cancelled, so drop an answer that still arrived.
             reply = task.isCancelled ? .cancelled : .answered(answer)
         } catch {
-            // Whatever the loader throws after a cancel, the user asked for it: not an error to show.
             reply = task.isCancelled ? .cancelled : .failed(.couldNotLoadAnswer)
         }
         if let index = turns.firstIndex(where: { $0.id == turnID }) {
