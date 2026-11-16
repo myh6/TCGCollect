@@ -15,6 +15,7 @@ platform :ios do
       derived_data_path: "build/DerivedData",
       output_directory: "build/test-results",
       output_types: "junit",
+      output_files: "TCGCollect.xml",
       result_bundle: true,
       xcargs: "CODE_SIGNING_ALLOWED=NO"
     )
@@ -32,8 +33,15 @@ def use_placeholder_secrets_if_missing
 end
 
 # The end-to-end tests skip themselves because E2E_BASE_URL and E2E_API_KEY aren't set here.
+# Swift Testing writes its JUnit report next to the given path, as <name>-swift-testing.xml.
 def test_package(name)
-  sh("swift", "test", "--package-path", File.expand_path("../Packages/#{name}", __dir__))
+  results = File.expand_path("../build/test-results", __dir__)
+  FileUtils.mkdir_p(results)
+  sh(
+    "swift", "test",
+    "--package-path", File.expand_path("../Packages/#{name}", __dir__),
+    "--xunit-output", File.join(results, "#{name}.xml")
+  )
 end
 
 def simulator_destination

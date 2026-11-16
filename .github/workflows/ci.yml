@@ -11,6 +11,13 @@ jobs:
   unit-tests:
     runs-on: macos-26
     timeout-minutes: 30
+    permissions:
+      contents: read
+      checks: write
+    env:
+      LC_ALL: en_US.UTF-8
+      LANG: en_US.UTF-8
+      FASTLANE_SKIP_UPDATE_CHECK: "1"
     steps:
       - uses: actions/checkout@v4
 
@@ -19,5 +26,25 @@ jobs:
           sudo xcode-select -s "$(ls -d /Applications/Xcode_26*.app | sort -V | tail -1)"
           xcodebuild -version
 
+      - name: Set up Ruby and fastlane
+        uses: ruby/setup-ruby@v1
+        with:
+          bundler-cache: true
+
       - name: Run unit tests
-        run: scripts/ci.sh
+        run: bundle exec fastlane ci
+
+      - name: Report test results
+        if: ${{ !cancelled() }}
+        uses: mikepenz/action-junit-report@v5
+        with:
+          report_paths: build/test-results/*.xml
+          check_name: Unit tests
+
+      - name: Keep test results
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: build/test-results/
+          retention-days: 14

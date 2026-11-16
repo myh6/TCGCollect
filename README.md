@@ -41,7 +41,9 @@ To try the app without a backend, tick the `-sampleCards` launch argument in the
 scripts/ci.sh
 ```
 
-This runs the AppCore and HoloCard package tests and the app's unit tests on an iOS Simulator, the same as CI does on every pull request into `main`.
+This runs the fastlane `ci` lane: the AppCore and HoloCard package tests and the app's unit tests on an iOS Simulator, the same as CI does on every pull request into `main`. Results go to `build/test-results/` (a JUnit report and an `.xcresult`).
+
+fastlane comes from Bundler at the version pinned in `Gemfile.lock`, on the Ruby version in `.ruby-version` (e.g. installed with `rbenv install`). You can also call lanes directly with `bundle exec fastlane <lane>`.
 
 End-to-end tests call a real backend. They skip themselves unless you set these environment variables:
 
