@@ -20,7 +20,7 @@ struct ChatView: View {
     var body: some View {
         VStack(spacing: 0) {
             if viewModel.turns.isEmpty {
-                ContentUnavailableView("Ask anything about One Piece TCG", systemImage: "bubble.left.and.text.bubble.right")
+                ContentUnavailableView("Ask anything about trading cards", systemImage: "bubble.left.and.text.bubble.right")
                     .contentShape(Rectangle())
                     .onTapGesture { isQuestionFocused = false }
             } else {
@@ -38,22 +38,27 @@ struct ChatView: View {
     }
 
     private var conversation: some View {
-        ScrollView {
-            LazyVStack(alignment: .leading, spacing: 24) {
-                ForEach(viewModel.turns) { turn in
-                    ChatTurnView(turn: turn, addToCollection: addToCollection) {
-                        Task { await viewModel.retry(turn) }
+        ScrollViewReader { proxy in
+            ScrollView {
+                VStack(alignment: .leading, spacing: 24) {
+                    ForEach(viewModel.turns) { turn in
+                        ChatTurnView(turn: turn, addToCollection: addToCollection) {
+                            Task { await viewModel.retry(turn) }
+                        }
+                        .id(turn.id)
                     }
                 }
+                .padding()
             }
-            .padding()
-            .scrollTargetLayout()
+            .defaultScrollAnchor(.bottom)
+            .scrollDismissesKeyboard(.interactively)
+            .contentShape(Rectangle())
+            .onTapGesture { isQuestionFocused = false }
+            .onChange(of: viewModel.turns) {
+                guard let newest = viewModel.turns.last else { return }
+                withAnimation { proxy.scrollTo(newest.id, anchor: .bottom) }
+            }
         }
-        .defaultScrollAnchor(.bottom)
-        .scrollPosition(id: .constant(viewModel.turns.last?.id), anchor: .bottom)
-        .scrollDismissesKeyboard(.interactively)
-        .contentShape(Rectangle())
-        .onTapGesture { isQuestionFocused = false }
     }
 
     private var inputBar: some View {
