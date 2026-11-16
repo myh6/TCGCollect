@@ -1,9 +1,20 @@
+require "rexml/document"
+
 default_platform(:ios)
 
 platform :ios do
+  after_all do |lane|
+    notify_slack(lane, success: true)
+  end
+
+  error do |lane, exception|
+    notify_slack(lane, success: false, details: exception.message.gsub(/\e\[[\d;]*m/, ""))
+  end
+
   desc "Runs every unit test: the AppCore and HoloCard packages' and the app's TCGCollectTests on an iOS Simulator"
   desc "Set SIMULATOR_ID=<udid> to pick a simulator; otherwise fastlane picks an available iPhone"
   lane :ci do
+    FileUtils.rm_rf(test_results_directory)
     use_placeholder_secrets_if_missing
     test_package("AppCore")
     test_package("HoloCard")
@@ -17,8 +28,10 @@ platform :ios do
       output_types: "junit",
       output_files: "TCGCollect.xml",
       result_bundle: true,
+      skip_slack: true,
       xcargs: "CODE_SIGNING_ALLOWED=NO"
     )
+    lane_context[:SLACK_DETAILS] = test_summary
   end
 
   desc "Builds an unsigned Release app for the iOS Simulator and zips it into build/artifacts"
@@ -44,6 +57,7 @@ platform :ios do
     zip_path = File.join(artifacts, "TCGCollect-#{version}-#{build_number}-simulator.zip")
     sh("ditto", "-c", "-k", "--keepParent", app, zip_path)
     UI.success("Simulator app: #{zip_path}")
+    lane_context[:SLACK_DETAILS] = File.basename(zip_path)
     zip_path
   end
 end
@@ -61,13 +75,61 @@ end
 # The end-to-end tests skip themselves because E2E_BASE_URL and E2E_API_KEY aren't set here.
 # Swift Testing writes its JUnit report next to the given path, as <name>-swift-testing.xml.
 def test_package(name)
-  results = File.expand_path("../build/test-results", __dir__)
-  FileUtils.mkdir_p(results)
+  FileUtils.mkdir_p(test_results_directory)
   sh(
     "swift", "test",
     "--package-path", File.expand_path("../Packages/#{name}", __dir__),
-    "--xunit-output", File.join(results, "#{name}.xml")
+    "--xunit-output", File.join(test_results_directory, "#{name}.xml")
   )
+end
+
+def test_results_directory
+  File.expand_path("../build/test-results", __dir__)
+end
+
+def test_summary
+  counts = Hash.new(0)
+  Dir[File.join(test_results_directory, "*.xml")].each do |file|
+    REXML::XPath.each(REXML::Document.new(File.read(file)), "//testcase") do |testcase|
+      if testcase.elements["failure"] || testcase.elements["error"]
+        counts[:failed] += 1
+      elsif testcase.elements["skipped"]
+        counts[:skipped] += 1
+      else
+        counts[:passed] += 1
+      end
+    end
+  end
+  "#{counts.values.sum} tests: #{counts[:passed]} passed, #{counts[:failed]} failed, #{counts[:skipped]} skipped"
+end
+
+# Posts only when SLACK_URL is set, as CI does, so local runs stay quiet. A Slack outage never fails the lane.
+def notify_slack(lane, success:, details: nil)
+  return UI.message("SLACK_URL not set; skipping Slack") if ENV["SLACK_URL"].to_s.empty?
+
+  fields = {
+    "Details" => (details || lane_context[:SLACK_DETAILS]).to_s[0, 500],
+    "Branch" => ENV["GIT_BRANCH"],
+    "Pull request" => ENV["PR_URL"],
+    "Run" => github_run_url
+  }.reject { |_, value| value.to_s.empty? }
+
+  slack(
+    message: success ? "✅ TCGCollect `#{lane}` passed" : "❌ TCGCollect `#{lane}` failed",
+    success: success,
+    slack_url: ENV["SLACK_URL"],
+    default_payloads: [],
+    payload: fields,
+    fail_on_error: false
+  )
+rescue StandardError => e
+  UI.error("Couldn't post to Slack: #{e.message}")
+end
+
+def github_run_url
+  return nil if ENV["GITHUB_RUN_ID"].to_s.empty?
+
+  "#{ENV['GITHUB_SERVER_URL']}/#{ENV['GITHUB_REPOSITORY']}/actions/runs/#{ENV['GITHUB_RUN_ID']}"
 end
 
 def info_plist_value(app, key)

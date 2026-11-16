@@ -18,6 +18,9 @@ jobs:
       LC_ALL: en_US.UTF-8
       LANG: en_US.UTF-8
       FASTLANE_SKIP_UPDATE_CHECK: "1"
+      SLACK_URL: ${{ secrets.SLACK_URL }}
+      GIT_BRANCH: ${{ github.head_ref || github.ref_name }}
+      PR_URL: ${{ github.event.pull_request.html_url }}
     steps:
       - uses: actions/checkout@v4
 
@@ -58,6 +61,9 @@ jobs:
       LC_ALL: en_US.UTF-8
       LANG: en_US.UTF-8
       FASTLANE_SKIP_UPDATE_CHECK: "1"
+      SLACK_URL: ${{ secrets.SLACK_URL }}
+      GIT_BRANCH: ${{ github.head_ref || github.ref_name }}
+      PR_URL: ${{ github.event.pull_request.html_url }}
     steps:
       - uses: actions/checkout@v4
 
