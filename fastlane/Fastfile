@@ -1,3 +1,5 @@
+require "json"
+require "net/http"
 require "rexml/document"
 
 default_platform(:ios)
@@ -59,6 +61,56 @@ platform :ios do
     UI.success("Simulator app: #{zip_path}")
     lane_context[:SLACK_DETAILS] = File.basename(zip_path)
     zip_path
+  end
+
+  desc "Releases a new version: tests, bumps the version, builds, tags, creates a GitHub Release, then updates Jira tickets"
+  desc "Options: bump:patch|minor|major (default patch), dry_run:true|false (default true: only logs what it would change)"
+  lane :release do |options|
+    bump = (options[:bump] || "patch").to_s
+    UI.user_error!("bump must be patch, minor or major, got #{bump}") unless %w[patch minor major].include?(bump)
+    dry_run = options[:dry_run].to_s != "false"
+
+    if dry_run
+      UI.important("Dry run: nothing is committed, tagged, pushed, released or changed in Jira")
+    else
+      ensure_git_branch(branch: "^main$")
+      ensure_git_status_clean
+    end
+
+    commits = commit_messages_since(last_release_tag)
+    tickets = jira_keys(commits)
+    version = next_version(current_marketing_version, bump)
+    build_number = current_build_number + 1
+    notes = release_notes(commits, tickets)
+    UI.message("Release #{version} (#{build_number}), tickets: #{tickets.empty? ? 'none' : tickets.join(', ')}")
+
+    ci
+    set_version(version, build_number) unless dry_run
+    zip_path = build
+
+    release_url = nil
+    unless dry_run
+      git_commit(path: project_file, message: "Release #{version} (#{build_number})")
+      add_git_tag(tag: "v#{version}")
+      push_to_git_remote(remote_branch: "main", tags: true)
+      release = set_github_release(
+        repository_name: ENV["GITHUB_REPOSITORY"] || "myh6/TCGCollect",
+        api_token: ENV["GITHUB_TOKEN"],
+        name: "TCGCollect #{version}",
+        tag_name: "v#{version}",
+        commitish: "main",
+        description: notes,
+        upload_assets: [zip_path]
+      )
+      release_url = release && release["html_url"]
+    end
+
+    jira_results = tickets.map { |key| update_jira_ticket(key, version, release_url, dry_run: dry_run) }
+    lane_context[:SLACK_DETAILS] = [
+      dry_run ? "Dry run: would release v#{version} (#{build_number})" : "Released v#{version} (#{build_number})",
+      release_url,
+      jira_results.empty? ? "No Jira tickets since the last release" : jira_results.join("\n")
+    ].compact.join("\n")
   end
 end
 
@@ -130,6 +182,102 @@ def github_run_url
   return nil if ENV["GITHUB_RUN_ID"].to_s.empty?
 
   "#{ENV['GITHUB_SERVER_URL']}/#{ENV['GITHUB_REPOSITORY']}/actions/runs/#{ENV['GITHUB_RUN_ID']}"
+end
+
+def project_file
+  File.expand_path("../TCGCollect.xcodeproj/project.pbxproj", __dir__)
+end
+
+def current_marketing_version
+  single_build_setting("MARKETING_VERSION")
+end
+
+def current_build_number
+  Integer(single_build_setting("CURRENT_PROJECT_VERSION"))
+end
+
+# Every target shares one version, so a release changes them all together.
+def single_build_setting(name)
+  values = File.read(project_file).scan(/^\s*#{name} = ([^;]+);/).flatten.uniq
+  UI.user_error!("Expected one #{name} across all targets, found #{values.inspect}") unless values.size == 1
+  values.first
+end
+
+def next_version(version, bump)
+  major, minor, patch = (version.split(".").map(&:to_i) + [0, 0, 0]).first(3)
+  case bump
+  when "major" then "#{major + 1}.0.0"
+  when "minor" then "#{major}.#{minor + 1}.0"
+  else "#{major}.#{minor}.#{patch + 1}"
+  end
+end
+
+def set_version(version, build_number)
+  contents = File.read(project_file)
+    .gsub(/^(\s*MARKETING_VERSION = )[^;]+;/, "\\1#{version};")
+    .gsub(/^(\s*CURRENT_PROJECT_VERSION = )[^;]+;/, "\\1#{build_number};")
+  File.write(project_file, contents)
+end
+
+def last_release_tag
+  sh("git", "tag", "--list", "v*", "--sort=-v:refname", log: false).lines.first&.strip
+end
+
+def commit_messages_since(tag)
+  range = tag ? "#{tag}..HEAD" : "HEAD"
+  sh("git", "log", "--no-merges", "--format=%B%x1e", range, log: false).split("\x1e").map(&:strip).reject(&:empty?)
+end
+
+def jira_keys(commits)
+  commits.join("\n").scan(/\bTCG-\d+\b/).uniq.sort_by { |key| key.split("-").last.to_i }
+end
+
+def release_notes(commits, tickets)
+  subjects = commits.map { |message| "- #{message.lines.first.strip}" }
+  shown = subjects.first(30)
+  shown << "- …and #{subjects.size - shown.size} more" if subjects.size > shown.size
+  shown << "\nJira: #{tickets.join(', ')}" unless tickets.empty?
+  shown.join("\n")
+end
+
+def jira_configured?
+  %w[JIRA_SITE JIRA_EMAIL JIRA_API_TOKEN].all? { |name| !ENV[name].to_s.empty? }
+end
+
+# A release is already public when Jira is updated, so a Jira problem is reported, not raised.
+def update_jira_ticket(key, version, release_url, dry_run:)
+  return "#{key}: Jira not configured, skipped" unless jira_configured?
+
+  issue = jira_request(:get, "/rest/api/2/issue/#{key}?fields=status")
+  status = issue.dig("fields", "status", "name").to_s
+  return "#{key}: already #{status}" if status.casecmp?("Done")
+
+  done = jira_request(:get, "/rest/api/2/issue/#{key}/transitions")["transitions"]
+    .find { |transition| transition.dig("to", "name").to_s.casecmp?("Done") }
+  return "#{key} (#{status}): no transition to Done" unless done
+  return "#{key} (#{status}): would comment and move to Done" if dry_run
+
+  jira_request(:post, "/rest/api/2/issue/#{key}/comment", { body: "Released in TCGCollect #{version}: #{release_url}" })
+  jira_request(:post, "/rest/api/2/issue/#{key}/transitions", { transition: { id: done["id"] } })
+  "#{key}: #{status} → Done"
+rescue StandardError => e
+  UI.error("Jira #{key}: #{e.message}")
+  "#{key}: Jira update failed (#{e.message})"
+end
+
+def jira_request(method, path, body = nil)
+  uri = URI("#{ENV['JIRA_SITE'].chomp('/')}#{path}")
+  request = (method == :post ? Net::HTTP::Post : Net::HTTP::Get).new(uri)
+  request.basic_auth(ENV["JIRA_EMAIL"], ENV["JIRA_API_TOKEN"])
+  request["Accept"] = "application/json"
+  if body
+    request["Content-Type"] = "application/json"
+    request.body = JSON.generate(body)
+  end
+  response = Net::HTTP.start(uri.host, uri.port, use_ssl: uri.scheme == "https") { |http| http.request(request) }
+  raise "#{method.upcase} #{uri.path} returned HTTP #{response.code}" unless response.is_a?(Net::HTTPSuccess)
+
+  response.body.to_s.empty? ? {} : JSON.parse(response.body)
 end
 
 def info_plist_value(app, key)

@@ -35,6 +35,16 @@ Builds an unsigned Release app for the iOS Simulator and zips it into build/arti
 
 Install it with: unzip the file, then xcrun simctl install booted TCGCollect.app
 
+### ios release
+
+```sh
+[bundle exec] fastlane ios release
+```
+
+Releases a new version: tests, bumps the version, builds, tags, creates a GitHub Release, then updates Jira tickets
+
+Options: bump:patch|minor|major (default patch), dry_run:true|false (default true: only logs what it would change)
+
 ----
 
 This README.md is auto-generated and will be re-generated every time [_fastlane_](https://fastlane.tools) is run.
