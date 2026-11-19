@@ -10,7 +10,9 @@ import AppCore
 
 enum CatalogUIComposer {
     static func makeGamesList(loader: CardGamesLoader) -> CatalogListViewModel<CardGame> {
-        CatalogListViewModel(load: loader.loadGames)
+        CatalogListViewModel {
+            try await loader.loadGames()
+        }
     }
 
     static func makeSetsList(of game: CardGame, loader: CardSetsLoader) -> CatalogListViewModel<CardSet> {
