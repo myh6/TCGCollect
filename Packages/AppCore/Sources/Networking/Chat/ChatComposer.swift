@@ -13,7 +13,7 @@ public enum ChatComposer {
         let client = BackendClient.make(apiKey: apiKey, session: session ?? makeSession())
         return RemoteLoader(
             client: client,
-            makeRequest: { question in try ChatEndpoint.sendMessage(question).urlRequest(baseURL: baseURL) },
+            makeRequest: { question, history in try ChatEndpoint.sendMessage(question, history: history).urlRequest(baseURL: baseURL) },
             map: ChatResponseMapper.map
         )
     }

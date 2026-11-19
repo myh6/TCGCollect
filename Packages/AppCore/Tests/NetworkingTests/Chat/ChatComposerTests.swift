@@ -8,6 +8,7 @@
 import Foundation
 import Testing
 import Networking
+import Domain
 
 // The stub's state is shared by the tests in this suite, so run them one at a time.
 @Suite(.serialized)
@@ -17,13 +18,13 @@ struct ChatComposerTests {
         let session = Stub.makeSession(replyingWith: makeAnswerJSON("an answer"))
         let sut = ChatComposer.makeRemoteChatLoader(baseURL: URL(string: "http://base-url.com")!, apiKey: "an api key", session: session)
 
-        _ = try await sut.load(question: "a question")
+        _ = try await sut.load(question: "a question", history: [])
 
         let requests = Stub.requests
         #expect(requests.map(\.url) == [URL(string: "http://base-url.com/v1/ask")!])
         #expect(requests.map(\.httpMethod) == ["POST"])
         #expect(requests.map { $0.value(forHTTPHeaderField: "X-API-Key") } == ["an api key"])
-        #expect(Stub.requestJSONBodies == [["question": "a question"]])
+        #expect(Stub.requestJSONBodies == [["question": "a question", "history": []]])
     }
 
     @Test func makeRemoteChatLoader_deliversAnswerWithSuggestionsFromBackend() async throws {
@@ -37,10 +38,26 @@ struct ChatComposerTests {
         let session = Stub.makeSession(replyingWith: makeAnswerJSON("an answer", cards: [card]))
         let sut = ChatComposer.makeRemoteChatLoader(baseURL: URL(string: "http://base-url.com")!, apiKey: "an api key", session: session)
 
-        let answer = try await sut.load(question: "a question")
+        let answer = try await sut.load(question: "a question", history: [])
 
         #expect(answer.text == "an answer")
         #expect(answer.suggestions.map(\.card.id) == [1])
+    }
+
+    @Test func makeRemoteChatLoader_sendsHistoryWithQuestion() async throws {
+        let session = Stub.makeSession(replyingWith: makeAnswerJSON("an answer"))
+        let sut = ChatComposer.makeRemoteChatLoader(baseURL: URL(string: "http://base-url.com")!, apiKey: "an api key", session: session)
+        let history = [ChatExchange(question: "a previous question", answer: ChatAnswer(text: "a previous answer", suggestions: []))]
+
+        _ = try await sut.load(question: "a question", history: history)
+
+        #expect(Stub.requestJSONBodies == [[
+            "question": "a question",
+            "history": [
+                ["role": "user", "text": "a previous question"],
+                ["role": "assistant", "text": "a previous answer"],
+            ],
+        ]])
     }
 
     // MARK: - Helpers

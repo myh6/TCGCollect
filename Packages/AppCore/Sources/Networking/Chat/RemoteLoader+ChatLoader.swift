@@ -7,8 +7,8 @@
 
 import Domain
 
-extension RemoteLoader: ChatLoader where Input == String, Resource == ChatAnswer {
-    public func load(question: String) async throws -> ChatAnswer {
-        try await load(question)
+extension RemoteLoader: ChatLoader where Input == (question: String, history: [ChatExchange]), Resource == ChatAnswer {
+    public func load(question: String, history: [ChatExchange]) async throws -> ChatAnswer {
+        try await load((question, history))
     }
 }

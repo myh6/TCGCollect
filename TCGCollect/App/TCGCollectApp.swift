@@ -127,7 +127,7 @@ struct TCGCollectApp: App {
         do {
             let configuration = try BackendConfiguration(infoDictionary: Bundle.main.infoDictionary ?? [:])
             let loader = ChatComposer.makeRemoteChatLoader(baseURL: configuration.baseURL, apiKey: configuration.apiKey)
-            return ChatViewModel(loader: loader)
+            return ChatViewModel(loader: RememberingChatLoader(decoratee: loader))
         } catch {
             Logger(subsystem: "TCGCollect", category: "Chat").error("Chat unavailable: \(String(describing: error))")
             return nil
